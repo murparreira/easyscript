@@ -87,6 +87,9 @@ pub struct Character {
     pub portrait: Option<String>,
     /// Who they are, in a sentence.
     pub role: Option<String>,
+    /// The voice moods recorded for them (values of the tag shown as `voice`). Empty: not
+    /// tracked. A line asking for another mood is reported.
+    pub voices: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Deserialize, Serialize)]

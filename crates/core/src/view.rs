@@ -56,6 +56,8 @@ pub struct CharacterView {
     /// A key into [`ReadView::images`].
     pub portrait: Option<String>,
     pub role: Option<String>,
+    /// Voice moods recorded for them.
+    pub voices: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
@@ -191,6 +193,7 @@ fn build(project: &Project, editing: bool) -> ReadView {
                 speakers: c.speakers.clone(),
                 portrait: c.portrait.clone().filter(|p| images.contains_key(p)),
                 role: c.role.clone(),
+                voices: c.voices.clone(),
             })
             .collect(),
         tags: config

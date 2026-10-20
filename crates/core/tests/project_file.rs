@@ -45,6 +45,7 @@ fn character(id: &str, name: &str) -> ConfigEdit {
         speakers: vec![name.into()],
         portrait: None,
         role: None,
+        voices: vec![],
     }
 }
 
@@ -58,6 +59,7 @@ fn change_a_character_keeps_comments() {
             speakers: vec!["Keeper".into(), "Old Man".into()],
             portrait: Some("faces/keeper.png".into()),
             role: None,
+            voices: vec![],
         },
         expect![[r##"
         # The lighthouse's project file.

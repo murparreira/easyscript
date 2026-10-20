@@ -66,6 +66,7 @@ pub fn check(project: &Project, script: &Script) -> Vec<Diagnostic> {
     checker.jumps();
     checker.speakers();
     checker.portraits();
+    checker.voices();
     checker.tags();
     checker.unreachable();
     checker.places();
@@ -268,6 +269,41 @@ impl Checker<'_> {
                     self.in_config(portrait),
                 );
             }
+        }
+    }
+
+    /// Lines asking for a voice mood their speaker has no recording in.
+    fn voices(&mut self) {
+        let config = &self.project.config;
+        let Some((voice, _)) = config
+            .tags
+            .iter()
+            .find(|(_, spec)| spec.show.as_deref() == Some("voice"))
+        else {
+            return;
+        };
+        let mut missing: BTreeMap<(String, String), (Span, usize)> = BTreeMap::new();
+        for_each_text_line(self.script, |speaker, tags, span| {
+            let Some(character) = speaker.and_then(|s| config.character_of_speaker(s)) else {
+                return;
+            };
+            if character.voices.is_empty() {
+                return;
+            }
+            for tag in tags.iter().filter(|t| t.name == *voice) {
+                if let Some(mood) = &tag.value
+                    && !character.voices.contains(mood)
+                {
+                    missing
+                        .entry((character.id.clone(), mood.clone()))
+                        .or_insert((span, 0))
+                        .1 += 1;
+                }
+            }
+        });
+        for ((id, mood), (span, count)) in missing {
+            let message = format!("{id} has no `{mood}` voice recorded ({})", lines(count));
+            self.push(Severity::Warning, "missing-voice", message, self.at(span));
         }
     }
 

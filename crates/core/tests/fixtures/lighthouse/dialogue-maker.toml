@@ -26,6 +26,7 @@ id = "keeper"
 name = "The Keeper"
 speakers = ["Keeper"]
 portrait = "faces/keeper_calm.png"
+voices = ["calm"]
 
 [[characters]]
 id = "sailor"
@@ -40,6 +41,7 @@ path = "faces/{value}.png"
 [tags.mood]
 kind = "enum"
 values = ["calm", "angry"]
+show = "voice"
 
 [tags.thought]
 kind = "flag"

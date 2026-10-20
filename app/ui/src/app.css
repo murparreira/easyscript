@@ -1518,3 +1518,11 @@ input.meaning {
 .builder table.flags td:nth-child(2) {
   width: 45%;
 }
+
+fieldset.voices {
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}

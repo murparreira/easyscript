@@ -41,6 +41,7 @@ name = "The Keeper"
 speakers = ["Keeper", "Old Man"]
 portrait = "faces/keeper_calm.png"
 role = "Keeps the lamp lit; knows every ship that sank."
+voices = ["calm", "angry"]   # voice moods recorded; a line asking for another is reported
 
 # Line tags, `[#name=value]`. Kinds: `flag` (no value), `enum` (one of `values`),
 # `asset` (a file, at `path` with `{value}`), `text` (anything).
@@ -97,6 +98,7 @@ title = "Walkthrough"
 | `unknown-jump-target` | error | A jump to a title the file does not have (or import). |
 | `unknown-speaker` | warning | A speaker no character lists. Needs `[[characters]]`. |
 | `missing-portrait` | error | A character's portrait file does not exist. |
+| `missing-voice` | warning | A line asks for a voice mood (the tag shown as `voice`) its speaker has no recording in. Needs `voices`. |
 | `unknown-tag` | warning | A tag not in `[tags]`. Needs `[tags]`. |
 | `bad-tag-value` | warning | A value a tag's kind does not allow. |
 | `missing-asset` | error | An `asset` tag's file does not exist. |

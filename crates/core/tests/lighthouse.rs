@@ -23,11 +23,12 @@ fn checks() {
     expect![[r#"
         dialogue-maker.toml:21:38: error[unknown-place-file]: place `tower`: `dialogue/missing.dialogue` is not one of the dialogue files
         dialogue-maker.toml:22:25: warning[unknown-place-label]: place `tower`: no label `no_such_label` in its files
-        dialogue-maker.toml:34:13: error[missing-portrait]: sailor's portrait `faces/sailor.png` does not exist
-        dialogue-maker.toml:60:9: error[missing-document]: document `docs/missing.md` cannot be read
+        dialogue-maker.toml:35:13: error[missing-portrait]: sailor's portrait `faces/sailor.png` does not exist
+        dialogue-maker.toml:62:9: error[missing-document]: document `docs/missing.md` cannot be read
         dialogue/latin1.dialogue:1:1: error[unreadable-file]: cannot read this file (not UTF-8); it is left alone
         dialogue/pier.dialogue:7:32: error[missing-asset]: `faces/sailor_worried.png` does not exist (1 line)
         dialogue/pier.dialogue:8:1: warning[unknown-speaker]: speaker `Stranger` is no character's (1 line)
+        dialogue/pier.dialogue:9:1: warning[missing-voice]: keeper has no `sleepy` voice recorded (1 line)
         dialogue/pier.dialogue:9:15: warning[bad-tag-value]: `sleepy` is not one of mood's values (calm, angry)
         dialogue/pier.dialogue:9:28: warning[bad-tag-value]: `thought` takes no value, has `yes`
         dialogue/pier.dialogue:9:41: warning[unknown-tag]: tag `volume` is not in the project file (1 line)
@@ -228,5 +229,5 @@ fn read_view() {
     assert_eq!(asked.set_by, ["keeper_intro"]);
     assert_eq!(asked.read_by, ["keeper_intro", "tower_top"]);
     assert_eq!(view.documents.len(), 1, "the missing document is left out");
-    assert_eq!(view.problems.len(), 16);
+    assert_eq!(view.problems.len(), 17);
 }

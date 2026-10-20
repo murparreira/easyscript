@@ -213,6 +213,7 @@ fn keeper() -> ConfigEdit {
         speakers: vec!["Keeper".into()],
         portrait: None,
         role: None,
+        voices: vec![],
     }
 }
 

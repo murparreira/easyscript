@@ -20,6 +20,9 @@ pub enum ConfigEdit {
         speakers: Vec<String>,
         portrait: Option<String>,
         role: Option<String>,
+        /// Voice moods recorded for them.
+        #[serde(default)]
+        voices: Vec<String>,
     },
     RemoveCharacter {
         id: String,
@@ -89,6 +92,7 @@ pub fn apply(text: &str, edit: &ConfigEdit) -> Result<String, EditError> {
             speakers,
             portrait,
             role,
+            voices,
         } => {
             let id = required("A character's id", id)?;
             let table = entry(&mut doc, "characters", "id", id);
@@ -96,6 +100,11 @@ pub fn apply(text: &str, edit: &ConfigEdit) -> Result<String, EditError> {
             set(table, "speakers", Some(strings(speakers)));
             set(table, "portrait", nonempty(portrait).map(Into::into));
             set(table, "role", nonempty(role).map(Into::into));
+            set(
+                table,
+                "voices",
+                (!voices.is_empty()).then(|| strings(voices)),
+            );
         }
         ConfigEdit::RemoveCharacter { id } => remove(&mut doc, "characters", "id", id)?,
         ConfigEdit::MoveCharacter { id, up } => move_entry(&mut doc, "characters", "id", id, *up)?,

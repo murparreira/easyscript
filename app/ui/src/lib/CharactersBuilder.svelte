@@ -23,25 +23,26 @@
     ]),
   ]);
 
-  type Form = { id: string; name: string; speakers: string; portrait: string; role: string; isNew: boolean };
+  type Form = { id: string; name: string; speakers: string; portrait: string; role: string; voices: string[]; isNew: boolean };
+  const voiceTag = $derived(reader.view.tags.find((t) => t.show === "voice" && t.kind === "enum"));
   let form: Form | null = $state(null);
 
   function open(c: CharacterView | null, speaker = "") {
     form = c
-      ? { id: c.id, name: c.name, speakers: c.speakers.join(", "), portrait: c.portrait ?? "", role: c.role ?? "", isNew: false }
-      : { id: slug(speaker), name: speaker, speakers: speaker, portrait: "", role: "", isNew: true };
+      ? { id: c.id, name: c.name, speakers: c.speakers.join(", "), portrait: c.portrait ?? "", role: c.role ?? "", voices: [...c.voices], isNew: false }
+      : { id: slug(speaker), name: speaker, speakers: speaker, portrait: "", role: "", voices: [], isNew: true };
   }
 
   async function save() {
     if (!form) return;
     const ok = await editor.editProject([
-      { op: "set_character", id: form.id, name: form.name, speakers: list(form.speakers), portrait: form.portrait || null, role: form.role || null },
+      { op: "set_character", id: form.id, name: form.name, speakers: list(form.speakers), portrait: form.portrait || null, role: form.role || null, voices: form.voices },
     ]);
     if (ok) form = null;
   }
 
   function join(c: CharacterView, speaker: string) {
-    editor.editProject([{ op: "set_character", id: c.id, name: c.name, speakers: [...c.speakers, speaker], portrait: c.portrait, role: c.role }]);
+    editor.editProject([{ op: "set_character", id: c.id, name: c.name, speakers: [...c.speakers, speaker], portrait: c.portrait, role: c.role, voices: c.voices }]);
   }
 
   const total = (c: CharacterView) => c.speakers.reduce((n, s) => n + (lines.get(s) ?? 0), 0);
@@ -95,6 +96,7 @@
             </div>
           </div>
           {#if c.role}<p class="role">{c.role}</p>{/if}
+          {#if c.voices.length > 0}<div class="values"><span class="k">Voice</span>{#each c.voices as v (v)}<span class="vtag">{v}</span>{/each}</div>{/if}
           {@const faces = c.speakers.flatMap((s) => reader.facesBySpeaker.get(s) ?? [])}
           {#if faces.length > 0 && faceTag?.path}
             <div class="gallery" aria-label="Faces their lines use">
@@ -119,6 +121,13 @@
           <label class="le-field"><span class="k">Name</span><input bind:value={form.name} /></label>
           <label class="le-field"><span class="k">Speaker names in the files (comma separated)</span><input bind:value={form.speakers} spellcheck="false" /></label>
           <label class="le-field"><span class="k">Role</span><textarea bind:value={form.role} rows="2"></textarea></label>
+          {#if voiceTag}
+            <fieldset class="voices"><legend class="k">Voice moods recorded (none: not tracked)</legend>
+              {#each voiceTag.values as v (v)}
+                <label class="tog"><input type="checkbox" checked={form.voices.includes(v)} onchange={(e) => form && (form.voices = e.currentTarget.checked ? [...form.voices, v] : form.voices.filter((x) => x !== v))} /> {v}</label>
+              {/each}
+            </fieldset>
+          {/if}
         </div>
         <div class="le-side">
           <span class="k">Portrait</span>

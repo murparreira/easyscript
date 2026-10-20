@@ -4,4 +4,8 @@ export type CharacterView = { id: string, name: string, speakers: Array<string>,
 /**
  * A key into [`ReadView::images`].
  */
-portrait: string | null, role: string | null, };
+portrait: string | null, role: string | null, 
+/**
+ * Voice moods recorded for them.
+ */
+voices: Array<string>, };
