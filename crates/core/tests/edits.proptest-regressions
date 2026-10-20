@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc f9296217b806f84fb69e3bd768b65579645a872c18534f0a35a1873e45ddaf1f # shrinks to (text, (start, end), edit) = ("Hi]]| else\n~ a\n~ a\n\tChoice => aHi[% there\\     => a\n\nelif y\n [#a, b=c]\t| \t => a there~ a\n~ a\n: else\n [if x]- \t [#a, b=c]# note\n\n- \\# note\nHi\tif x\n\t", (146, 147), MoveLine { at: 146, up: false })

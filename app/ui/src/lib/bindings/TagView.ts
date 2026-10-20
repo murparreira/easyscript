@@ -5,4 +5,8 @@ export type TagView = { name: string, kind: TagKindView, values: Array<string>,
 /**
  * For `asset` tags: where the file is, with `{value}`.
  */
-path: string | null, show: string | null, description: string | null, };
+path: string | null, show: string | null, description: string | null, 
+/**
+ * For `asset` tags, in a view made for editing: the values whose files exist.
+ */
+available: Array<string>, };

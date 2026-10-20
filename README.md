@@ -4,7 +4,7 @@ A desktop workbench for game scripts. It opens a game project's own dialogue fil
 
 First format: [Dialogue Manager](https://github.com/nathanhoad/godot_dialogue_manager) 3 `.dialogue` files (Godot 4).
 
-**Status:** M3. The app opens a project and shows its whole script, following the files as they change; the command line checks it, counts it, and writes it as one HTML page. Nothing edits yet. Plan, decisions and milestones: [`PLAN.md`](PLAN.md).
+**Status:** M4. The app opens a project, shows its whole script, and edits it: lines, choices, speakers, faces, tags and conditions, written back only on save and only where they changed. The command line checks the script, counts it, and writes it as one HTML page. Plan, decisions and milestones: [`PLAN.md`](PLAN.md).
 
 Working name; the public name can change before release.
 
@@ -22,7 +22,9 @@ app/
 
 ## Use
 
-The app: open a game project's folder (or start it with one, `dm-app path/to/game`). It shows the script by place, with search, the project's variant filters, faces, links between labels, its documents, a flags index and who talks; it reloads when a file changes on disk. It reads; it does not write.
+The app: open a game project's folder (or start it with one, `dm-app path/to/game`). It shows the script by place, with search, the project's variant filters, faces, links between labels, its documents, a flags index and who talks; it reloads when a file changes on disk.
+
+Turn on **Edit** to change it: open a line or choice (✎, or double-click) to change its speaker, words, face, voice, thought or shake, or a choice's condition, with a preview of the balloon; add lines and choices, move them, remove them; edit `if`/`when` conditions with the project's flags at hand. Edits stay in the app until **Save**, which shows the change to each file first (**Review**), writes only the files you changed, and only the lines you changed in them. A file that changed on disk since it was read (the Godot editor saved it, a `git pull`) is never written over: the save is refused, your edits are kept, and you choose. Undo and redo with Ctrl+Z and Ctrl+Shift+Z; save with Ctrl+S.
 
 The command line:
 

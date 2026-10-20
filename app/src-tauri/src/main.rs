@@ -2,41 +2,147 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use dm_core::{Project, ReadView, read_view};
+use dm_core::Workspace;
+use dm_core::edit::Edit;
+use dm_core::workspace::{FileDiff, Session};
 use notify_debouncer_full::notify::{RecommendedWatcher, RecursiveMode};
 use notify_debouncer_full::{DebounceEventResult, Debouncer, RecommendedCache, new_debouncer};
-use tauri::{AppHandle, Emitter, Manager, State};
+use serde::Serialize;
+use tauri::{AppHandle, Builder, Emitter, Manager, Runtime, State};
 
-/// The open project, and the watcher that follows its files.
+/// The open project (its working copies and edits), and the watcher that follows its files.
 #[derive(Default)]
-struct Opened(Mutex<Option<Watched>>);
+struct Opened(Arc<Mutex<Option<Open>>>);
 
-struct Watched {
-    root: PathBuf,
+struct Open {
+    workspace: Workspace,
     _watcher: Debouncer<RecommendedWatcher, RecommendedCache>,
+}
+
+/// After an edit: the new session, and where the edited line starts now.
+#[derive(Serialize)]
+struct Edited {
+    session: Session,
+    at: usize,
+}
+
+/// Run `f` on the open workspace, off the main thread (loading and views take a moment).
+async fn with_workspace<T: Send + 'static>(
+    opened: &Opened,
+    f: impl FnOnce(&mut Workspace) -> Result<T, String> + Send + 'static,
+) -> Result<T, String> {
+    let shared = opened.0.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut guard = shared
+            .lock()
+            .map_err(|_| "the project is unusable after an error; open it again".to_owned())?;
+        let open = guard.as_mut().ok_or("no project is open")?;
+        f(&mut open.workspace)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// Open a project folder: read it, and start following its files.
 #[tauri::command]
-async fn open_project(
+async fn open_project<R: Runtime>(
     path: String,
-    app: AppHandle,
+    app: AppHandle<R>,
     opened: State<'_, Opened>,
-) -> Result<ReadView, String> {
+) -> Result<Session, String> {
     let root = PathBuf::from(path);
-    let view = load(root.clone()).await?;
+    let (workspace, session) = tauri::async_runtime::spawn_blocking({
+        let root = root.clone();
+        move || {
+            let workspace = Workspace::open(&root, None).map_err(|e| e.to_string())?;
+            let session = workspace.session();
+            Ok::<_, String>((workspace, session))
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())??;
     let watcher = watch(&root, app.clone()).map_err(|e| format!("cannot follow changes: {e}"))?;
-    *opened.0.lock().expect("not poisoned") = Some(Watched {
-        root,
+    *opened
+        .0
+        .lock()
+        .map_err(|_| "the app is unusable after an error")? = Some(Open {
+        workspace,
         _watcher: watcher,
     });
     if let Some(window) = app.get_webview_window("main") {
-        let _ = window.set_title(&format!("{} — dialogue-maker", view.title));
+        let _ = window.set_title(&format!("{} — dialogue-maker", session.view.title));
     }
-    Ok(view)
+    Ok(session)
+}
+
+/// Read the files again after `project-changed`; unsaved edits stay.
+#[tauri::command]
+async fn reload(opened: State<'_, Opened>) -> Result<Session, String> {
+    with_workspace(&opened, |ws| {
+        ws.refresh().map_err(|e| e.to_string())?;
+        Ok(ws.session())
+    })
+    .await
+}
+
+/// Make edits to one file's working copy, as one step.
+#[tauri::command]
+async fn edit(path: String, edits: Vec<Edit>, opened: State<'_, Opened>) -> Result<Edited, String> {
+    with_workspace(&opened, move |ws| {
+        let at = ws.edit_batch(&path, &edits).map_err(|e| e.to_string())?;
+        Ok(Edited {
+            session: ws.session(),
+            at,
+        })
+    })
+    .await
+}
+
+#[tauri::command]
+async fn undo(opened: State<'_, Opened>) -> Result<Session, String> {
+    with_workspace(&opened, |ws| {
+        ws.undo();
+        Ok(ws.session())
+    })
+    .await
+}
+
+#[tauri::command]
+async fn redo(opened: State<'_, Opened>) -> Result<Session, String> {
+    with_workspace(&opened, |ws| {
+        ws.redo();
+        Ok(ws.session())
+    })
+    .await
+}
+
+/// The unsaved edits, file by file.
+#[tauri::command]
+async fn diffs(opened: State<'_, Opened>) -> Result<Vec<FileDiff>, String> {
+    with_workspace(&opened, |ws| Ok(ws.diffs())).await
+}
+
+/// Write the edited files; refused when one changed on disk.
+#[tauri::command]
+async fn save(opened: State<'_, Opened>) -> Result<Session, String> {
+    with_workspace(&opened, |ws| {
+        ws.save().map_err(|e| e.to_string())?;
+        Ok(ws.session())
+    })
+    .await
+}
+
+/// Drop the unsaved edits and read the files again.
+#[tauri::command]
+async fn discard(opened: State<'_, Opened>) -> Result<Session, String> {
+    with_workspace(&opened, |ws| {
+        ws.discard().map_err(|e| e.to_string())?;
+        Ok(ws.session())
+    })
+    .await
 }
 
 /// A project folder given on the command line (`dm-app path/to/game`), if any.
@@ -49,32 +155,10 @@ fn startup_project() -> Option<String> {
         .map(|p| p.canonicalize().unwrap_or(p).to_string_lossy().into_owned())
 }
 
-/// Read the open project again (after `project-changed`).
-#[tauri::command]
-async fn reload(opened: State<'_, Opened>) -> Result<ReadView, String> {
-    let root = opened
-        .0
-        .lock()
-        .expect("not poisoned")
-        .as_ref()
-        .map(|w| w.root.clone());
-    load(root.ok_or("no project is open")?).await
-}
-
-/// Loading reads every file and makes thumbnails: off the main thread.
-async fn load(root: PathBuf) -> Result<ReadView, String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        let project = Project::load(&root, None).map_err(|e| e.to_string())?;
-        Ok(read_view(&project))
-    })
-    .await
-    .map_err(|e| e.to_string())?
-}
-
 /// Emit `project-changed` when files under the root change.
-fn watch(
+fn watch<R: Runtime>(
     root: &Path,
-    app: AppHandle,
+    app: AppHandle<R>,
 ) -> notify_debouncer_full::notify::Result<Debouncer<RecommendedWatcher, RecommendedCache>> {
     let base = root.to_owned();
     let mut debouncer = new_debouncer(
@@ -127,16 +211,27 @@ fn main() {
     #[cfg(target_os = "linux")]
     avoid_nvidia_dmabuf_crash();
 
-    tauri::Builder::default()
+    app(Builder::default())
+        .run(tauri::generate_context!())
+        .expect("error while running dialogue-maker");
+}
+
+/// The app's plugins, state and commands, on any runtime (the tests use a mock one).
+fn app<R: Runtime>(builder: Builder<R>) -> Builder<R> {
+    builder
         .plugin(tauri_plugin_dialog::init())
         .manage(Opened::default())
         .invoke_handler(tauri::generate_handler![
             open_project,
             reload,
+            edit,
+            undo,
+            redo,
+            diffs,
+            save,
+            discard,
             startup_project
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running dialogue-maker");
 }
 
 #[cfg(test)]
@@ -154,5 +249,87 @@ mod tests {
         assert!(!matters(root, Path::new("/game/.godot/imported/x.ctex")));
         assert!(!matters(root, Path::new("/game/.git/index")));
         assert!(!matters(root, Path::new("/elsewhere/a.dialogue")));
+    }
+
+    /// Call a command the way the frontend does, with the same JSON.
+    fn call(
+        webview: &tauri::WebviewWindow<tauri::test::MockRuntime>,
+        cmd: &str,
+        args: serde_json::Value,
+    ) -> Result<serde_json::Value, serde_json::Value> {
+        let request = tauri::webview::InvokeRequest {
+            cmd: cmd.into(),
+            callback: tauri::ipc::CallbackFn(0),
+            error: tauri::ipc::CallbackFn(1),
+            url: if cfg!(windows) {
+                "http://tauri.localhost"
+            } else {
+                "tauri://localhost"
+            }
+            .parse()
+            .unwrap(),
+            body: tauri::ipc::InvokeBody::Json(args),
+            headers: Default::default(),
+            invoke_key: tauri::test::INVOKE_KEY.to_string(),
+        };
+        tauri::test::get_ipc_response(webview, request).map(|body| body.deserialize().unwrap())
+    }
+
+    #[test]
+    fn open_edit_save_through_the_commands() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("a.dialogue");
+        std::fs::write(&file, "~ a\nKeeper: One.\n").unwrap();
+
+        let app = app(tauri::test::mock_builder())
+            .build(tauri::test::mock_context(tauri::test::noop_assets()))
+            .unwrap();
+        let webview = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
+            .build()
+            .unwrap();
+
+        let session = call(
+            &webview,
+            "open_project",
+            serde_json::json!({ "path": dir.path() }),
+        )
+        .unwrap();
+        assert_eq!(session["view"]["stats"]["lines"], 1);
+        let line = &session["view"]["script"]["files"][0]["sections"][0]["labels"][0]["body"][0];
+        assert_eq!(line["words"], "One.");
+        let at = line["span"]["start"].clone();
+
+        // The edit as the frontend sends it (its types come from the same Rust).
+        let edited = call(
+            &webview,
+            "edit",
+            serde_json::json!({ "path": "a.dialogue", "edits": [{ "op": "set_text", "at": at, "text": "Uno." }, { "op": "set_tag", "at": at, "name": "mood", "value": "calm" }] }),
+        )
+        .unwrap();
+        assert_eq!(
+            edited["session"]["state"]["changed"],
+            serde_json::json!(["a.dialogue"])
+        );
+        assert_eq!(
+            std::fs::read_to_string(&file).unwrap(),
+            "~ a\nKeeper: One.\n",
+            "not written before saving"
+        );
+
+        let diffs = call(&webview, "diffs", serde_json::json!({})).unwrap();
+        assert_eq!(diffs[0]["path"], "a.dialogue");
+
+        let saved = call(&webview, "save", serde_json::json!({})).unwrap();
+        assert_eq!(saved["state"]["changed"], serde_json::json!([]));
+        assert_eq!(
+            std::fs::read_to_string(&file).unwrap(),
+            "~ a\nKeeper: Uno. [#mood=calm]\n"
+        );
+
+        let error = call(&webview, "edit", serde_json::json!({ "path": "a.dialogue", "edits": [{ "op": "remove_line", "at": 1 }] })).unwrap_err();
+        assert!(
+            error.as_str().unwrap().contains("no line starts"),
+            "{error}"
+        );
     }
 }

@@ -6,7 +6,11 @@ import type { Tag } from "./Tag";
 /**
  * A line of dialogue, spoken or narrated.
  */
-export type Line = { speaker: string | null, text: Array<Segment>, tags: Array<Tag>, 
+export type Line = { speaker: string | null, text: Array<Segment>, 
+/**
+ * The words as written in the file, for editing.
+ */
+words: string, tags: Array<Tag>, 
 /**
  * A jump at the end of the line.
  */

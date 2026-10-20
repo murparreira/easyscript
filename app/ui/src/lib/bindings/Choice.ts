@@ -10,7 +10,11 @@ import type { Tag } from "./Tag";
 /**
  * A response the player can pick.
  */
-export type Choice = { span: Span, notes: Array<Note>, marks: Array<Mark>, speaker: string | null, text: Array<Segment>, tags: Array<Tag>, 
+export type Choice = { span: Span, notes: Array<Note>, marks: Array<Mark>, speaker: string | null, text: Array<Segment>, 
+/**
+ * The words as written in the file, for editing.
+ */
+words: string, tags: Array<Tag>, 
 /**
  * `[if ...]`: shown only when this holds.
  */

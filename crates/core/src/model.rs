@@ -141,6 +141,8 @@ pub enum NodeKind {
 pub struct Line {
     pub speaker: Option<String>,
     pub text: Vec<Segment>,
+    /// The words as written in the file, for editing.
+    pub words: String,
     pub tags: Vec<Tag>,
     /// A jump at the end of the line.
     pub jump: Option<Jump>,
@@ -159,6 +161,8 @@ pub struct Choice {
     pub marks: Vec<Mark>,
     pub speaker: Option<String>,
     pub text: Vec<Segment>,
+    /// The words as written in the file, for editing.
+    pub words: String,
     pub tags: Vec<Tag>,
     /// `[if ...]`: shown only when this holds.
     pub condition: Option<String>,

@@ -7,7 +7,7 @@ import type { Label } from "./bindings/Label";
 import type { ReadView } from "./bindings/ReadView";
 import type { Tag } from "./bindings/Tag";
 import type { TagView } from "./bindings/TagView";
-import { type GroupOut, type Side, labelText, organize } from "./model";
+import { type GroupOut, type Side, labelText, organize, walk } from "./model";
 import { normalize } from "./text";
 
 export type VariantChoice = "all" | "true" | "false";
@@ -42,6 +42,12 @@ export class Reader {
   /** A CSS class per image, so each data URI is in the page once. */
   imageClasses: Map<string, string>;
   imageCss: string;
+  /** Speaker names to suggest: the characters' first, then any others in the script. */
+  speakers: string[];
+  /** For each speaker, the faces their lines use, most used first. */
+  facesBySpeaker: Map<string, string[]>;
+  /** How the script calls a flag in a condition, with `{flag}` for its name. */
+  flagCall: string | null;
 
   constructor(view: ReadView) {
     this.view = $state.raw(view);
@@ -58,6 +64,11 @@ export class Reader {
         .map(([key, uri]) => `.${this.imageClasses.get(key)}{background-image:url("${uri}")}`)
         .join("\n"),
     );
+    this.speakers = $derived([
+      ...new Set([...this.view.characters.flatMap((c) => c.speakers), ...this.view.stats.speakers.map((s) => s.name).filter(Boolean)]),
+    ]);
+    this.facesBySpeaker = $derived(facesBySpeaker(this.view, this.tagSpecs));
+    this.flagCall = $derived(flagCall(this.view));
     const prefs = loadPrefs();
     this.variants = prefs.variants ?? {};
     this.showIds = prefs.showIds ?? true;
@@ -110,6 +121,50 @@ export class Reader {
   shown(tags: Tag[], show: string): Tag[] {
     return tags.filter((t) => this.tagSpecs.get(t.name)?.show === show);
   }
+}
+
+/** The faces each speaker's lines use, most used first. */
+function facesBySpeaker(view: ReadView, specs: Map<string, TagView>): Map<string, string[]> {
+  const counts = new Map<string, Map<string, number>>();
+  for (const file of view.script.files) {
+    for (const label of file.sections.flatMap((s) => s.labels)) {
+      for (const node of walk(label.body)) {
+        const lines = node.type === "line" ? [node] : node.type === "menu" ? node.choices : [];
+        for (const line of lines) {
+          for (const tag of line.tags) {
+            if (specs.get(tag.name)?.show !== "face" || !tag.value) continue;
+            const speaker = line.speaker ?? "";
+            const faces = counts.get(speaker) ?? new Map<string, number>();
+            faces.set(tag.value, (faces.get(tag.value) ?? 0) + 1);
+            counts.set(speaker, faces);
+          }
+        }
+      }
+    }
+  }
+  return new Map([...counts].map(([speaker, faces]) => [speaker, [...faces].sort((a, b) => b[1] - a[1]).map(([f]) => f)]));
+}
+
+/** The way the script writes a flag check, taken from a condition that has one. */
+function flagCall(view: ReadView): string | null {
+  const read = view.flag_functions.read[0];
+  if (!read) return null;
+  const re = new RegExp(`([A-Za-z_][\\w.]*\\.)?${read.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\(`);
+  for (const file of view.script.files) {
+    for (const label of file.sections.flatMap((s) => s.labels)) {
+      for (const node of walk(label.body)) {
+        const conditions = [
+          ...(node.type === "branch" || node.type === "match" ? node.arms.map((a) => a.condition) : []),
+          ...(node.type === "menu" ? node.choices.map((c) => c.condition) : []),
+        ];
+        for (const condition of conditions) {
+          const m = condition?.match(re);
+          if (m) return `${m[1] ?? ""}${read}("{flag}")`;
+        }
+      }
+    }
+  }
+  return `${read}("{flag}")`;
 }
 
 const KEY = Symbol("reader");

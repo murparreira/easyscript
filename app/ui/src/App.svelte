@@ -6,6 +6,8 @@
   import { open } from "@tauri-apps/plugin-dialog";
   import { onMount } from "svelte";
   import type { ReadView } from "./lib/bindings/ReadView";
+  import type { Session } from "./lib/bindings/Session";
+  import { Editor } from "./lib/editor.svelte";
   import Reader from "./lib/Reader.svelte";
 
   const LAST = "dialogue-maker:last-project";
@@ -15,6 +17,8 @@
   let error: string | null = $state(null);
   let loading = $state(false);
   const desktop = isTauri();
+  // In the desktop app, every answer from the app is a session: the view and the edits.
+  const editor = desktop ? new Editor((session) => (view = session.view)) : undefined;
 
   function embedded(): ReadView | null {
     const data = document.getElementById("dm-view")?.textContent?.trim();
@@ -34,7 +38,7 @@
     loading = true;
     error = null;
     try {
-      view = await invoke<ReadView>("open_project", { path: folder });
+      editor!.receive(await invoke<Session>("open_project", { path: folder }));
       path = folder;
       remember(folder);
     } catch (e) {
@@ -78,7 +82,7 @@
     });
     const stop = listen("project-changed", async () => {
       try {
-        view = await invoke<ReadView>("reload");
+        editor!.receive(await invoke<Session>("reload"));
       } catch (e) {
         error = String(e);
       }
@@ -90,7 +94,7 @@
 </script>
 
 {#if view}
-  <Reader {view}>
+  <Reader {view} {editor}>
     {#snippet actions()}
       {#if desktop}
         <button class="btn" type="button" onclick={choose}>Open another project…</button>

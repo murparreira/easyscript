@@ -40,6 +40,10 @@ enum Command {
         /// Write the view's data as JSON instead of the page.
         #[arg(long)]
         json: bool,
+        /// With --json: the view the app edits with (every face a line could pick), for
+        /// working on the frontend.
+        #[arg(long, hide = true, requires = "json")]
+        editing: bool,
     },
     /// Count labels, lines, choices, speakers and tags.
     Stats {
@@ -111,12 +115,17 @@ fn main() -> ExitCode {
             project,
             output,
             json,
+            editing,
         } => {
             let project = match project.load() {
                 Ok(p) => p,
                 Err(code) => return code,
             };
-            let view = dm_core::read_view(&project);
+            let view = if editing {
+                dm_core::view::editing_view(&project)
+            } else {
+                dm_core::read_view(&project)
+            };
             let data = serde_json::to_string(&view).expect("serializable");
             let contents = if json {
                 data

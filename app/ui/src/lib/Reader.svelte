@@ -3,6 +3,8 @@
   import { type Snippet, onMount, tick, untrack } from "svelte";
   import type { ReadView } from "./bindings/ReadView";
   import DocumentSection from "./DocumentSection.svelte";
+  import EditBar from "./EditBar.svelte";
+  import { type Editor, provideEditor } from "./editor.svelte";
   import FlagsTable from "./FlagsTable.svelte";
   import PlaceSection from "./PlaceSection.svelte";
   import ProblemsSection from "./ProblemsSection.svelte";
@@ -10,7 +12,9 @@
   import StatsSection from "./StatsSection.svelte";
   import Toc from "./Toc.svelte";
 
-  let { view, actions }: { view: ReadView; actions?: Snippet } = $props();
+  let { view, actions, editor }: { view: ReadView; actions?: Snippet; editor?: Editor } = $props();
+  // The editor exists in the desktop app only; the static page reads.
+  provideEditor(untrack(() => editor));
   // Later views (a reload) go in through the effect below; the reader keeps its state.
   const reader = new Reader(untrack(() => view));
   provideReader(reader);
@@ -45,10 +49,30 @@
   const speakers = $derived(reader.view.stats.speakers.filter((s) => s.name).length);
   const errors = $derived(reader.view.problems.filter((p) => p.severity === "error").length);
 
+  // Undo, redo and save from the keyboard; text fields keep their own undo.
+  function keydown(e: KeyboardEvent) {
+    if (!editor || !(e.ctrlKey || e.metaKey)) return;
+    const typing = e.target instanceof HTMLElement && e.target.closest("input, textarea, select");
+    const key = e.key.toLowerCase();
+    if (key === "s") {
+      e.preventDefault();
+      if (editor.state.changed.length > 0) editor.save();
+    } else if (!typing && key === "z") {
+      e.preventDefault();
+      if (e.shiftKey) editor.redo();
+      else editor.undo();
+    } else if (!typing && key === "y") {
+      e.preventDefault();
+      editor.redo();
+    }
+  }
+
   function choose(variant: string, choice: VariantChoice) {
     reader.variants = { ...reader.variants, [variant]: choice };
   }
 </script>
+
+<svelte:window onkeydown={keydown} />
 
 <header class="masthead gut">
   <div class="in">
@@ -77,6 +101,7 @@
         <button type="button" aria-pressed={choice === "false"} onclick={() => choose(variant.name, "false")}>{variant.if_false}</button>
       </div>
     {/each}
+    {#if editor}<label class="tog edit-toggle"><input type="checkbox" bind:checked={editor.on} /> Edit</label>{/if}
     <label class="tog"><input type="checkbox" bind:checked={reader.showIds} /> Ids and file names</label>
     <label class="tog"><input type="checkbox" bind:checked={reader.showMarks} /> Highlight marked lines</label>
     {#if reader.searching}
@@ -85,7 +110,7 @@
   </div>
 </div>
 
-<div class="layout gut" class:no-ids={!reader.showIds} class:show-marks={reader.showMarks}>
+<div class="layout gut" class:no-ids={!reader.showIds} class:show-marks={reader.showMarks} class:editing={editor?.on}>
   <Toc />
   <main>
     {#if !reader.searching}
@@ -103,3 +128,5 @@
     {/if}
   </main>
 </div>
+
+{#if editor}<EditBar />{/if}

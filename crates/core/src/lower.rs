@@ -388,6 +388,7 @@ impl Lowerer<'_> {
                 response.syntax(),
                 condition_node.as_ref().map(|c| c.syntax()),
             ),
+            words: crate::edit::words_source(response.syntax()),
             tags: self.tags(response.tags()),
             condition,
             jump: response.jump().map(|j| self.jump(&j)),
@@ -532,6 +533,7 @@ impl Lowerer<'_> {
         let mut line = Line {
             speaker: d.speaker().map(|s| s.name()),
             text: self.segments(d.syntax(), None),
+            words: crate::edit::words_source(d.syntax()),
             tags: self.tags(d.tags()),
             jump: d.jump().map(|j| self.jump(&j)),
             id: static_id(d.static_id()),

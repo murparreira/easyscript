@@ -65,6 +65,8 @@ pub struct TagView {
     pub path: Option<String>,
     pub show: Option<String>,
     pub description: Option<String>,
+    /// For `asset` tags, in a view made for editing: the values whose files exist.
+    pub available: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, TS)]
@@ -120,13 +122,41 @@ const THUMBNAIL: u32 = 128;
 
 /// Load everything the read view needs from a project.
 pub fn read_view(project: &Project) -> ReadView {
+    build(project, false)
+}
+
+/// The read view with what editing needs too: every face a line could pick.
+pub fn editing_view(project: &Project) -> ReadView {
+    build(project, true)
+}
+
+fn build(project: &Project, editing: bool) -> ReadView {
     let config = &project.config;
+    let available: BTreeMap<&String, Vec<String>> = if editing {
+        config
+            .tags
+            .iter()
+            .filter(|(_, spec)| spec.kind == TagKind::Asset)
+            .filter_map(|(name, spec)| Some((name, asset_values(project, spec.path.as_deref()?))))
+            .collect()
+    } else {
+        BTreeMap::new()
+    };
     let script = lower(project);
     let problems = check(project, &script);
     let stats = stats(&script);
 
+    let mut paths = image_paths(project, &script);
+    for (name, values) in &available {
+        let spec = &config.tags[*name];
+        if spec.show.as_deref() == Some("face")
+            && let Some(pattern) = &spec.path
+        {
+            paths.extend(values.iter().map(|v| pattern.replace("{value}", v)));
+        }
+    }
     let mut images = BTreeMap::new();
-    for path in image_paths(project, &script) {
+    for path in paths {
         if let Some(uri) = thumbnail(&project.resolve(&path)) {
             images.insert(path, uri);
         }
@@ -172,6 +202,7 @@ pub fn read_view(project: &Project) -> ReadView {
                 path: spec.path.clone(),
                 show: spec.show.clone(),
                 description: spec.description.clone(),
+                available: available.get(name).cloned().unwrap_or_default(),
             })
             .collect(),
         variants: config
@@ -293,6 +324,29 @@ fn image_paths(project: &Project, script: &Script) -> BTreeSet<String> {
         }
     }
     paths
+}
+
+/// The values of an asset tag whose files exist: for `faces/{value}.png`, the names of the
+/// `.png` files in `faces/`. Only patterns with `{value}` in the file name are listed.
+fn asset_values(project: &Project, pattern: &str) -> Vec<String> {
+    let Some((before, after)) = pattern.split_once("{value}") else {
+        return Vec::new();
+    };
+    if after.contains('/') {
+        return Vec::new();
+    }
+    let (dir, prefix) = before.rsplit_once('/').unwrap_or(("", before));
+    let Ok(entries) = std::fs::read_dir(project.resolve(dir)) else {
+        return Vec::new();
+    };
+    let mut values: Vec<String> = entries
+        .filter_map(Result::ok)
+        .filter_map(|e| e.file_name().into_string().ok())
+        .filter_map(|name| Some(name.strip_prefix(prefix)?.strip_suffix(after)?.to_owned()))
+        .filter(|v| !v.is_empty())
+        .collect();
+    values.sort();
+    values
 }
 
 /// A small JPEG of an image, on white, as a data URI. None when it does not read.
