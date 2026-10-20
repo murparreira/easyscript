@@ -109,3 +109,22 @@ fn a_random_prefixed_comment_is_a_comment() {
         "two random groups around the comment: {body:#?}"
     );
 }
+
+/// Deep nesting stays within a small stack (Windows gives threads less than Linux does).
+#[test]
+fn deep_nesting_lowers_on_a_small_stack() {
+    let text: String = (0..5_000)
+        .map(|depth| format!("{}- a\n", "\t".repeat(depth % 1_000)))
+        .collect();
+    std::thread::Builder::new()
+        .stack_size(1 << 20)
+        .spawn(move || {
+            let project = project(vec![text]);
+            let script = lower(&project);
+            check(&project, &script);
+            serde_json::to_string(&script).expect("serializes");
+        })
+        .expect("thread starts")
+        .join()
+        .expect("no overflow");
+}

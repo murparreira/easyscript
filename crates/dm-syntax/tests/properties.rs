@@ -106,9 +106,20 @@ proptest! {
 }
 
 #[test]
-fn deep_nesting_does_not_overflow() {
+fn deep_nesting_is_capped() {
     let text: String = (0..20_000)
         .map(|depth| format!("{}- a\n", "\t".repeat(depth % 2_000)))
         .collect();
-    common::check(&text);
+    let parse = common::check(&text);
+    let deepest = parse
+        .syntax()
+        .descendants()
+        .map(|n| {
+            n.ancestors()
+                .filter(|a| a.kind() == dm_syntax::SyntaxKind::BLOCK)
+                .count()
+        })
+        .max();
+    // MAX_DEPTH lines deep: the deepest sits in one block fewer.
+    assert_eq!(deepest, Some(dm_syntax::MAX_DEPTH - 1));
 }

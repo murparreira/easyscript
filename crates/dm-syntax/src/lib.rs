@@ -5,7 +5,8 @@
 //! what the parser does not read becomes `TEXT` or `ERROR` tokens, kept verbatim.
 //!
 //! The tree has one node per line, typed the way Dialogue Manager types it, and lines
-//! nested by indentation sit in a [`SyntaxKind::BLOCK`] under the line above them. Blank
+//! nested by indentation sit in a [`SyntaxKind::BLOCK`] under the line above them (up to
+//! [`MAX_DEPTH`] deep). Blank
 //! and comment lines sit at the level of the next line, as Dialogue Manager places them.
 //! Inside a line: the speaker, tags, inline conditions and mutations, `{{ }}`
 //! replacements, `[[a|b]]` random text, BBCode, static ids, jumps, and expressions as
@@ -22,6 +23,7 @@ mod parser;
 
 pub use kind::{DialogueLanguage, SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken};
 pub use line::indent_level;
+pub use parser::MAX_DEPTH;
 pub use rowan::{GreenNode, TextRange, TextSize, ast::AstNode};
 
 /// The Dialogue Manager release whose compiler the grammar follows.

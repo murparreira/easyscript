@@ -35,6 +35,11 @@ struct Open {
     has_block: bool,
 }
 
+/// How many lines deep blocks nest. Deeper lines are kept (every byte is), but beside the
+/// deepest line rather than under it, so that whatever walks the tree recursively stays
+/// within its stack. Scripts nest a handful of levels.
+pub const MAX_DEPTH: usize = 64;
+
 /// Prefixes after which a leading `\` stops a dialogue line reading as something else.
 const LINE_ESCAPES: [&str; 13] = [
     "using", "if", "elif", "else", "while", "match", "when", "do", "set", "-", "~", "=>", "%",
@@ -69,6 +74,10 @@ impl Parser<'_> {
         for line in lines {
             while open.last().is_some_and(|o| line.level <= o.level) {
                 self.close(open.pop().expect("checked"));
+            }
+            // At the depth limit, a deeper line sits beside the deepest line, not under it.
+            if open.len() == MAX_DEPTH && !line.ty.is_trivia() {
+                self.close(open.pop().expect("at the limit"));
             }
             if let Some(parent) = open.last_mut()
                 && !parent.has_block
