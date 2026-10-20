@@ -8,6 +8,7 @@
   import type { ReadView } from "./lib/bindings/ReadView";
   import type { Session } from "./lib/bindings/Session";
   import { Editor } from "./lib/editor.svelte";
+  import GitBar from "./lib/GitBar.svelte";
   import Reader from "./lib/Reader.svelte";
 
   const LAST = "dialogue-maker:last-project";
@@ -99,6 +100,7 @@
       {#if desktop}
         <button class="btn" type="button" onclick={choose}>Open another project…</button>
         {#if path}<span class="pmeta">{path} · follows changes on disk</span>{/if}
+        <GitBar />
         {#if error}<span class="error">{error}</span>{/if}
       {/if}
     {/snippet}

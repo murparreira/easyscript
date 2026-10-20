@@ -7,6 +7,7 @@ use std::time::Duration;
 
 use dm_core::Workspace;
 use dm_core::edit::Edit;
+use dm_core::git::{self, GitStatus};
 use dm_core::project_file::ConfigEdit;
 use dm_core::workspace::{FileDiff, Session};
 use notify_debouncer_full::notify::{RecommendedWatcher, RecursiveMode};
@@ -169,6 +170,68 @@ async fn discard(opened: State<'_, Opened>) -> Result<Session, String> {
     .await
 }
 
+/// How the project's files stand in git; none when it is not in a repository.
+#[tauri::command]
+async fn git_status(opened: State<'_, Opened>) -> Result<Option<GitStatus>, String> {
+    with_workspace(&opened, |ws| {
+        git::status(ws.root(), &ws.owned_paths()).map_err(|e| e.to_string())
+    })
+    .await
+}
+
+/// Commit these project files as saved; refused while they have unsaved edits.
+#[tauri::command]
+async fn git_commit(
+    paths: Vec<String>,
+    message: String,
+    opened: State<'_, Opened>,
+) -> Result<String, String> {
+    with_workspace(&opened, move |ws| {
+        let unsaved: Vec<String> = ws
+            .state()
+            .changed
+            .into_iter()
+            .filter(|c| paths.contains(c))
+            .collect();
+        if !unsaved.is_empty() {
+            return Err(format!(
+                "save first: {} {} unsaved edits",
+                unsaved.join(", "),
+                if unsaved.len() == 1 { "has" } else { "have" }
+            ));
+        }
+        let owned = ws.owned_paths();
+        if let Some(other) = paths.iter().find(|p| !owned.contains(p)) {
+            return Err(format!("{other} is not one of the project's files"));
+        }
+        git::commit(ws.root(), &paths, &message).map_err(|e| e.to_string())
+    })
+    .await
+}
+
+/// Make a branch, or switch to one, and read the project again from it. Refused while
+/// there are unsaved edits.
+#[tauri::command]
+async fn git_branch(
+    name: String,
+    create: bool,
+    opened: State<'_, Opened>,
+) -> Result<Session, String> {
+    with_workspace(&opened, move |ws| {
+        if !ws.state().changed.is_empty() {
+            return Err("save or discard your edits before changing branch".to_owned());
+        }
+        if create {
+            git::create_branch(ws.root(), &name).map_err(|e| e.to_string())?;
+        } else {
+            git::switch_branch(ws.root(), &name).map_err(|e| e.to_string())?;
+        }
+        ws.refresh().map_err(|e| e.to_string())?;
+        Ok(ws.session())
+    })
+    .await
+}
+
 /// A project folder given on the command line (`dm-app path/to/game`), if any.
 #[tauri::command]
 fn startup_project() -> Option<String> {
@@ -256,6 +319,9 @@ fn app<R: Runtime>(builder: Builder<R>) -> Builder<R> {
             diffs,
             save,
             discard,
+            git_status,
+            git_commit,
+            git_branch,
             startup_project
         ])
 }
@@ -351,6 +417,41 @@ mod tests {
             std::fs::read_to_string(&file).unwrap(),
             "~ a\nKeeper: Uno. [#mood=calm]\n"
         );
+
+        // Git: commits refuse unsaved edits, then take the saved file.
+        let repo = git2::Repository::init(dir.path()).unwrap();
+        repo.config()
+            .unwrap()
+            .set_str("user.name", "Writer")
+            .unwrap();
+        repo.config()
+            .unwrap()
+            .set_str("user.email", "writer@example.com")
+            .unwrap();
+        let status = call(&webview, "git_status", serde_json::json!({})).unwrap();
+        assert_eq!(status["files"][0]["path"], "a.dialogue");
+        call(&webview, "edit", serde_json::json!({ "path": "a.dialogue", "edits": [{ "op": "set_text", "at": at, "text": "Dos." }] })).unwrap();
+        let refused = call(
+            &webview,
+            "git_commit",
+            serde_json::json!({ "paths": ["a.dialogue"], "message": "Two" }),
+        )
+        .unwrap_err();
+        assert!(
+            refused.as_str().unwrap().starts_with("save first"),
+            "{refused}"
+        );
+        call(&webview, "save", serde_json::json!({})).unwrap();
+        let id = call(
+            &webview,
+            "git_commit",
+            serde_json::json!({ "paths": ["a.dialogue"], "message": "Two" }),
+        )
+        .unwrap();
+        assert_eq!(id.as_str().unwrap().len(), 7);
+        let status = call(&webview, "git_status", serde_json::json!({})).unwrap();
+        assert_eq!(status["files"], serde_json::json!([]));
+        assert!(status["head"].as_str().unwrap().ends_with("Two"));
 
         let error = call(&webview, "edit", serde_json::json!({ "path": "a.dialogue", "edits": [{ "op": "remove_line", "at": 1 }] })).unwrap_err();
         assert!(

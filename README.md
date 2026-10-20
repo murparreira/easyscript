@@ -28,6 +28,8 @@ The **Story map** shows it at a glance: labels place by place, the jumps, choice
 
 Turn on **Edit** to change it: open a line or choice (✎, or double-click) to change its speaker, words, face, voice, thought or shake, or a choice's condition, with a preview of the balloon; add lines and choices, move them, remove them; edit `if`/`when` conditions with the project's flags at hand. The **Project** tab edits the project file the same way: characters (with the speakers no character claims yet, and the faces each one's lines use), the tag schema with each tag's use, what each flag means, places and variants; or, for a project with none, drafts one from the dialogue. Edits stay in the app until **Save**, which shows the change to each file first (**Review**), writes only the files you changed, and only the lines you changed in them. A file that changed on disk since it was read (the Godot editor saved it, a `git pull`) is never written over: the save is refused, your edits are kept, and you choose. Undo and redo with Ctrl+Z and Ctrl+Shift+Z; save with Ctrl+S.
 
+In a git repository, the app shows the branch and what changed since the last commit, makes and switches branches, and commits the project's own files (dialogue, project file, documents) as saved, and nothing else: what the team staged by hand stays staged. Conflicts are shown, never resolved.
+
 The command line:
 
 ```sh

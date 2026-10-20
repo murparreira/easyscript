@@ -1772,3 +1772,28 @@ table.grid {
   stroke: var(--error);
   stroke-dasharray: 4 3;
 }
+
+.git-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: center;
+  width: 100%;
+  font-size: 0.85rem;
+}
+
+.git-bar select,
+.inline-form input {
+  font: 0.85rem var(--ui);
+  padding: 3px 6px;
+}
+
+.inline-form {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.commit-form {
+  display: grid;
+  gap: 12px;
+}

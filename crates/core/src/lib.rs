@@ -14,6 +14,7 @@ pub mod check;
 pub mod config;
 pub mod edit;
 pub mod flow;
+pub mod git;
 pub mod init;
 mod lower;
 pub mod model;

@@ -178,6 +178,33 @@ impl Workspace {
         self.config_text != self.config_disk.as_deref().unwrap_or("")
     }
 
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
+
+    /// The files dialogue-maker works on, relative to the project root: the dialogue files,
+    /// the project file and its documents (those inside the project).
+    pub fn owned_paths(&self) -> Vec<String> {
+        let mut paths: Vec<String> = self.project.files.iter().map(|f| f.path.clone()).collect();
+        let inside = |path: &Path| {
+            path.strip_prefix(&self.root).ok().map(|p| {
+                p.components()
+                    .map(|c| c.as_os_str().to_string_lossy())
+                    .collect::<Vec<_>>()
+                    .join("/")
+            })
+        };
+        if let Some(config) = inside(&self.config_path) {
+            paths.push(config);
+        }
+        for document in &self.project.config.documents {
+            if let Some(path) = inside(&self.project.resolve_document(&document.path)) {
+                paths.push(path);
+            }
+        }
+        paths
+    }
+
     /// Paths with unsaved edits: the project file first, then dialogue files.
     fn changed(&self) -> Vec<String> {
         let config = self.config_changed().then(|| self.config_key.clone());
