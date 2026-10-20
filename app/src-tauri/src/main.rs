@@ -7,6 +7,7 @@ use std::time::Duration;
 
 use dm_core::Workspace;
 use dm_core::edit::Edit;
+use dm_core::project_file::ConfigEdit;
 use dm_core::workspace::{FileDiff, Session};
 use notify_debouncer_full::notify::{RecommendedWatcher, RecursiveMode};
 use notify_debouncer_full::{DebounceEventResult, Debouncer, RecommendedCache, new_debouncer};
@@ -83,6 +84,29 @@ async fn open_project<R: Runtime>(
 async fn reload(opened: State<'_, Opened>) -> Result<Session, String> {
     with_workspace(&opened, |ws| {
         ws.refresh().map_err(|e| e.to_string())?;
+        Ok(ws.session())
+    })
+    .await
+}
+
+/// Make edits to the project file's working copy, as one step.
+#[tauri::command]
+async fn edit_project_file(
+    edits: Vec<ConfigEdit>,
+    opened: State<'_, Opened>,
+) -> Result<Session, String> {
+    with_workspace(&opened, move |ws| {
+        ws.edit_project_file(&edits).map_err(|e| e.to_string())?;
+        Ok(ws.session())
+    })
+    .await
+}
+
+/// For a project with none: a draft project file from its dialogue, unsaved.
+#[tauri::command]
+async fn draft_project_file(opened: State<'_, Opened>) -> Result<Session, String> {
+    with_workspace(&opened, |ws| {
+        ws.draft_project_file().map_err(|e| e.to_string())?;
         Ok(ws.session())
     })
     .await
@@ -225,6 +249,8 @@ fn app<R: Runtime>(builder: Builder<R>) -> Builder<R> {
             open_project,
             reload,
             edit,
+            edit_project_file,
+            draft_project_file,
             undo,
             redo,
             diffs,

@@ -7,6 +7,7 @@
   import { type Editor, provideEditor } from "./editor.svelte";
   import FlagsTable from "./FlagsTable.svelte";
   import PlaceSection from "./PlaceSection.svelte";
+  import ProjectPanel from "./ProjectPanel.svelte";
   import ProblemsSection from "./ProblemsSection.svelte";
   import { Reader, provideReader, type VariantChoice } from "./reader.svelte";
   import StatsSection from "./StatsSection.svelte";
@@ -101,7 +102,13 @@
         <button type="button" aria-pressed={choice === "false"} onclick={() => choose(variant.name, "false")}>{variant.if_false}</button>
       </div>
     {/each}
-    {#if editor}<label class="tog edit-toggle"><input type="checkbox" bind:checked={editor.on} /> Edit</label>{/if}
+    {#if editor}
+      <div class="seg" role="group" aria-label="Work on">
+        <button type="button" aria-pressed={editor.tab === "script"} onclick={() => editor && (editor.tab = "script")}>Script</button>
+        <button type="button" aria-pressed={editor.tab === "project"} onclick={() => editor && (editor.tab = "project")}>Project</button>
+      </div>
+      {#if editor.tab === "script"}<label class="tog edit-toggle"><input type="checkbox" bind:checked={editor.on} /> Edit</label>{/if}
+    {/if}
     <label class="tog"><input type="checkbox" bind:checked={reader.showIds} /> Ids and file names</label>
     <label class="tog"><input type="checkbox" bind:checked={reader.showMarks} /> Highlight marked lines</label>
     {#if reader.searching}
@@ -110,6 +117,9 @@
   </div>
 </div>
 
+{#if editor?.tab === "project"}
+  <div class="layout single gut editing"><main><ProjectPanel /></main></div>
+{:else}
 <div class="layout gut" class:no-ids={!reader.showIds} class:show-marks={reader.showMarks} class:editing={editor?.on}>
   <Toc />
   <main>
@@ -128,5 +138,7 @@
     {/if}
   </main>
 </div>
+
+{/if}
 
 {#if editor}<EditBar />{/if}

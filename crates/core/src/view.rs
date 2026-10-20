@@ -42,6 +42,9 @@ pub struct PlaceView {
     pub id: String,
     pub name: String,
     pub group: Option<String>,
+    pub files: Vec<String>,
+    pub labels: Vec<String>,
+    pub exclude_labels: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
@@ -174,6 +177,9 @@ fn build(project: &Project, editing: bool) -> ReadView {
                 id: p.id.clone(),
                 name: p.name.clone(),
                 group: p.group.clone(),
+                files: p.files.clone(),
+                labels: p.labels.clone(),
+                exclude_labels: p.exclude_labels.clone(),
             })
             .collect(),
         characters: config

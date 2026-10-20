@@ -72,3 +72,19 @@ export function initials(name: string): string {
     .join("")
     .toUpperCase();
 }
+
+/** A lowercase id from a name: "Avó Ovelha" → "avo_ovelha". */
+export function slug(name: string): string {
+  const id = normalize(name)
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return id || "item";
+}
+
+/** "a, b , c" → ["a", "b", "c"]. */
+export function list(text: string): string[] {
+  return text
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}

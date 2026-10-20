@@ -11,4 +11,12 @@ changed: Array<string>,
 /**
  * Files that changed on disk while they had unsaved edits: saving them is refused.
  */
-conflicts: Array<string>, can_undo: boolean, can_redo: boolean, };
+conflicts: Array<string>, can_undo: boolean, can_redo: boolean, 
+/**
+ * Where the project file is, or would be (relative to the project when inside it).
+ */
+project_file: string, 
+/**
+ * Whether there is one, on disk or as an unsaved draft.
+ */
+has_project_file: boolean, };

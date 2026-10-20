@@ -3,6 +3,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { getContext, setContext } from "svelte";
+import type { ConfigEdit } from "./bindings/ConfigEdit";
 import type { Edit } from "./bindings/Edit";
 import type { EditState } from "./bindings/EditState";
 import type { FileDiff } from "./bindings/FileDiff";
@@ -12,7 +13,9 @@ import type { Session } from "./bindings/Session";
 export type Target = { file: number; at: number; mode: "edit" | "before" | "after"; choice: boolean };
 
 export class Editor {
-  state: EditState = $state({ changed: [], conflicts: [], can_undo: false, can_redo: false });
+  state: EditState = $state({ changed: [], conflicts: [], can_undo: false, can_redo: false, project_file: "", has_project_file: false });
+  /** What the reader works on: the script, or the project file's builders. */
+  tab: "script" | "project" = $state("script");
   /** Edit mode: lines can be opened and changed. */
   on = $state(false);
   target: Target | null = $state(null);
@@ -57,6 +60,14 @@ export class Editor {
     return result.at;
   }
 
+  /** Edit the project file as one step. */
+  async editProject(edits: ConfigEdit[]): Promise<boolean> {
+    const session = await this.#run(() => invoke<Session>("edit_project_file", { edits }));
+    if (session) this.receive(session);
+    return session !== null;
+  }
+
+  draftProject = () => this.#session("draft_project_file");
   undo = () => this.#session("undo");
   redo = () => this.#session("redo");
   save = () => this.#session("save");

@@ -103,8 +103,9 @@ pub struct TagSpec {
     pub description: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize, ts_rs::TS)]
 #[serde(rename_all = "snake_case")]
+#[ts(export)]
 pub enum TagKind {
     /// Present or not: `[#pensamento]`.
     #[default]
