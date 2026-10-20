@@ -1,0 +1,102 @@
+name: Release
+
+# A `v*` tag builds the installers and the command line for Linux, macOS and Windows into a
+# draft release. Run by hand, it builds the same into workflow artifacts. Nothing is signed
+# yet (M9).
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  app:
+    name: App (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install Tauri system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+      - run: npm ci
+      - uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tauriScript: npm run tauri
+          tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+          releaseName: dialogue-maker ${{ github.ref_name }}
+          releaseDraft: true
+          prerelease: true
+          uploadWorkflowArtifacts: true
+
+  cli:
+    name: CLI (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # The command line carries the read view's page for `dialogue-maker build`.
+      - run: npm run build:page
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release --locked -p dm-cli
+      - name: Package
+        shell: bash
+        run: |
+          name="dialogue-maker-cli-${RUNNER_OS,,}-${RUNNER_ARCH,,}"
+          mkdir -p "out/$name"
+          cp README.md LICENSE-MIT LICENSE-APACHE "out/$name/"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cp target/release/dialogue-maker.exe "out/$name/"
+            (cd out && 7z a "$name.zip" "$name" > /dev/null)
+          else
+            cp target/release/dialogue-maker "out/$name/"
+            tar -C out -czf "out/$name.tar.gz" "$name"
+          fi
+          rm -r "out/$name"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: cli-${{ matrix.os }}
+          path: out/*
+
+  attach:
+    name: Attach the command line to the release
+    if: github.ref_type == 'tag'
+    needs: [app, cli]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: cli-*
+          merge-multiple: true
+          path: out
+      - name: Upload
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "$GITHUB_REF_NAME" out/* --clobber --repo "$GITHUB_REPOSITORY"

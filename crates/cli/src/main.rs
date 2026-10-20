@@ -1,4 +1,4 @@
-//! `dialogue-maker check | stats`. `build` and `export` arrive with M3 and M8.
+//! `dialogue-maker check | stats | build`. `export` arrives with M8.
 
 use std::fmt::Write as _;
 use std::io::Write as _;
@@ -29,6 +29,17 @@ enum Command {
         /// Exit with an error on warnings too.
         #[arg(long)]
         deny_warnings: bool,
+    },
+    /// Write the read view as one HTML file that opens anywhere, offline.
+    Build {
+        #[command(flatten)]
+        project: ProjectArgs,
+        /// Where to write it.
+        #[arg(short, long, default_value = "script.html")]
+        output: PathBuf,
+        /// Write the view's data as JSON instead of the page.
+        #[arg(long)]
+        json: bool,
     },
     /// Count labels, lines, choices, speakers and tags.
     Stats {
@@ -96,6 +107,41 @@ fn main() -> ExitCode {
             print(&out);
             ExitCode::from(u8::from(errors > 0 || (deny_warnings && warnings > 0)))
         }
+        Command::Build {
+            project,
+            output,
+            json,
+        } => {
+            let project = match project.load() {
+                Ok(p) => p,
+                Err(code) => return code,
+            };
+            let view = dm_core::read_view(&project);
+            let data = serde_json::to_string(&view).expect("serializable");
+            let contents = if json {
+                data
+            } else if PAGE.is_empty() {
+                eprintln!(
+                    "dialogue-maker: this binary was built without the page; run `npm run build:page`, then build it again"
+                );
+                return ExitCode::from(2);
+            } else {
+                page(&data)
+            };
+            if let Err(e) = std::fs::write(&output, contents) {
+                eprintln!("dialogue-maker: {}: {e}", output.display());
+                return ExitCode::from(2);
+            }
+            eprintln!(
+                "wrote {} ({} KB): {} labels, {} lines, {} problems",
+                output.display(),
+                std::fs::metadata(&output).map_or(0, |m| m.len() / 1024),
+                view.stats.labels,
+                view.stats.lines,
+                view.problems.len()
+            );
+            ExitCode::SUCCESS
+        }
         Command::Stats { project, json } => {
             let project = match project.load() {
                 Ok(p) => p,
@@ -111,6 +157,23 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
     }
+}
+
+/// The read view's page, as built by the frontend (empty when it was not built).
+const PAGE: &str = include_str!(concat!(env!("OUT_DIR"), "/page.html"));
+
+/// Where the page expects its data.
+const DATA_SLOT: &str = "<script id=\"dm-view\" type=\"application/json\"></script>";
+
+/// The page with the view's data in its slot. `<` is escaped so the data cannot end the
+/// script element early.
+fn page(data: &str) -> String {
+    let data = data.replace('<', "\\u003c");
+    PAGE.replacen(
+        DATA_SLOT,
+        &format!("<script id=\"dm-view\" type=\"application/json\">{data}</script>"),
+        1,
+    )
 }
 
 /// Write to stdout; a closed pipe (`| head`) is not an error.

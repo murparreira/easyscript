@@ -3,12 +3,14 @@
 //! to the exact bytes.
 
 use serde::Serialize;
+use ts_rs::TS;
 
 /// Index of a file in [`crate::Project::files`].
 pub type FileId = usize;
 
 /// Where something is: a file and a byte range in it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, TS)]
+#[ts(export)]
 pub struct Span {
     pub file: FileId,
     pub start: usize,
@@ -16,14 +18,16 @@ pub struct Span {
 }
 
 /// All the dialogue of a project.
-#[derive(Debug, Clone, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize, TS)]
+#[ts(export)]
 pub struct Script {
     pub files: Vec<ScriptFile>,
     /// Every place a flag is set or read, in file order.
     pub flags: Vec<FlagRef>,
 }
 
-#[derive(Debug, Clone, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize, TS)]
+#[ts(export)]
 pub struct ScriptFile {
     /// Relative to the project root, with `/`.
     pub path: String,
@@ -36,7 +40,8 @@ pub struct ScriptFile {
     pub sections: Vec<Section>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
 pub struct Import {
     pub path: String,
     pub alias: String,
@@ -44,7 +49,8 @@ pub struct Import {
 }
 
 /// Labels under one section header (or before any).
-#[derive(Debug, Clone, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize, TS)]
+#[ts(export)]
 pub struct Section {
     pub title: Option<String>,
     pub notes: Vec<Note>,
@@ -52,7 +58,8 @@ pub struct Section {
 }
 
 /// A title (`~ name`) and the lines up to the next one.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
 pub struct Label {
     pub id: String,
     /// The `~ name` line.
@@ -65,7 +72,8 @@ pub struct Label {
 }
 
 /// A comment kept with what follows it.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
 pub struct Note {
     /// Without the `#` (or `##`) and surrounding blanks.
     pub text: String,
@@ -73,7 +81,8 @@ pub struct Note {
 }
 
 /// Who wrote what: a comment with a marker from the project file.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
 pub struct Mark {
     pub who: String,
     pub note: Option<String>,
@@ -81,7 +90,8 @@ pub struct Mark {
 }
 
 /// One step of a label: a line, a menu, a branch...
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
 pub struct Node {
     pub span: Span,
     pub notes: Vec<Note>,
@@ -90,7 +100,8 @@ pub struct Node {
     pub kind: NodeKind,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum NodeKind {
     Line(Line),
@@ -125,7 +136,8 @@ pub enum NodeKind {
 }
 
 /// A line of dialogue, spoken or narrated.
-#[derive(Debug, Clone, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize, TS)]
+#[ts(export)]
 pub struct Line {
     pub speaker: Option<String>,
     pub text: Vec<Segment>,
@@ -139,7 +151,8 @@ pub struct Line {
 }
 
 /// A response the player can pick.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
 pub struct Choice {
     pub span: Span,
     pub notes: Vec<Note>,
@@ -154,7 +167,8 @@ pub struct Choice {
     pub body: Vec<Node>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
 pub struct Arm {
     pub keyword: ArmKeyword,
     /// The condition (or `when` value); none on `else`.
@@ -165,7 +179,8 @@ pub struct Arm {
     pub body: Vec<Node>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "snake_case")]
 pub enum ArmKeyword {
     If,
@@ -174,7 +189,8 @@ pub enum ArmKeyword {
     When,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
 pub struct RandomOption {
     pub weight: Option<String>,
     pub condition: Option<String>,
@@ -182,14 +198,16 @@ pub struct RandomOption {
     pub body: Vec<Node>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
 pub struct Effect {
     /// `do`, `do!`, `set`, `$>` or `$>>`.
     pub keyword: String,
     pub expr: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
 pub struct Jump {
     pub target: JumpTarget,
     /// `=><`: jump, then come back.
@@ -197,7 +215,8 @@ pub struct Jump {
     pub span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
 #[serde(tag = "kind", content = "value", rename_all = "snake_case")]
 pub enum JumpTarget {
     /// A title, maybe `alias/title` from an import.
@@ -210,7 +229,8 @@ pub enum JumpTarget {
     Expression(String),
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
 pub struct Tag {
     pub name: String,
     pub value: Option<String>,
@@ -218,7 +238,8 @@ pub struct Tag {
 }
 
 /// A piece of a line's text.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Segment {
     Text {
@@ -250,7 +271,8 @@ pub enum Segment {
 }
 
 /// A flag set or read somewhere in the dialogue.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
 pub struct FlagRef {
     pub flag: String,
     pub access: FlagAccess,
@@ -259,7 +281,8 @@ pub struct FlagRef {
     pub span: Span,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "snake_case")]
 pub enum FlagAccess {
     Set,

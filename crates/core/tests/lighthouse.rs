@@ -196,3 +196,37 @@ fn model_serializes() {
         serde_json::json!({ "type": "text", "text": "Another storm." })
     );
 }
+
+#[test]
+fn read_view() {
+    let view = dm_core::read_view(&load());
+    assert_eq!(view.title, "Lighthouse");
+    // The keeper's portrait has a thumbnail; the sailor's file is missing.
+    assert_eq!(
+        view.images.keys().collect::<Vec<_>>(),
+        ["faces/keeper_calm.png"]
+    );
+    assert!(view.images["faces/keeper_calm.png"].starts_with("data:image/jpeg;base64,"));
+    let keeper = view
+        .characters
+        .iter()
+        .find(|c| c.id == "keeper")
+        .expect("keeper");
+    assert_eq!(keeper.portrait.as_deref(), Some("faces/keeper_calm.png"));
+    assert_eq!(
+        view.characters
+            .iter()
+            .find(|c| c.id == "sailor")
+            .and_then(|c| c.portrait.clone()),
+        None
+    );
+    let asked = view
+        .flags
+        .iter()
+        .find(|f| f.flag == "asked")
+        .expect("asked");
+    assert_eq!(asked.set_by, ["keeper_intro"]);
+    assert_eq!(asked.read_by, ["keeper_intro", "tower_top"]);
+    assert_eq!(view.documents.len(), 1, "the missing document is left out");
+    assert_eq!(view.problems.len(), 16);
+}

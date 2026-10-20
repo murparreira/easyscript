@@ -3,10 +3,12 @@
 use std::collections::{BTreeSet, HashMap};
 
 use serde::Serialize;
+use ts_rs::TS;
 
 use crate::model::*;
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
 pub struct Stats {
     pub files: usize,
     pub labels: usize,
@@ -31,7 +33,8 @@ pub struct Stats {
     pub flags_read: usize,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
 pub struct Count {
     pub name: String,
     pub count: usize,

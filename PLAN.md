@@ -17,6 +17,8 @@ Working name; the public name can change before release.
 | First milestone | Lossless parser, then the read view | Reading proves the model on a real script before anything writes to disk |
 | Frontend | Svelte 5 + Vite, npm (confirmed at M0) | Small runtime for a view that mostly renders one large model |
 | Licence | MIT OR Apache-2.0 | The Rust norm |
+| Typed bridge | ts-rs (confirmed at M3) | specta 2 is still a release candidate; ts-rs is stable and covers the model's serde shapes. Commands are few, typed by hand |
+| Faces in the view | Thumbnails as data URIs in the view's data | One input for the app and the static page; no asset protocol to scope |
 
 ## Rules
 
@@ -42,7 +44,7 @@ app/
 ```
 
 - **One renderer, two hosts.** The read view is a frontend component fed the model as JSON. The app renders it live; `cli build` bundles the same frontend and the JSON into one HTML file (what `roteiro.py` makes today). No second renderer in Rust.
-- **Typed bridge.** The model's types are generated for TypeScript from Rust (`specta` / `tauri-specta`), so the frontend cannot drift from the core.
+- **Typed bridge.** The model's types are generated for TypeScript from Rust (ts-rs, by `cargo test`), so the frontend cannot drift from the core; CI fails when the committed types are stale.
 - **Formats as adapters.** A format reads a file into the model's syntax-backed scene tree and applies edits back to its own syntax tree. `.dialogue` first; others later (see M8).
 
 ### The project file

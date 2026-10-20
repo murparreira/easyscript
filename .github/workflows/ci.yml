@@ -41,6 +41,12 @@ jobs:
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: Test
         run: cargo test --workspace --locked
+      # `cargo test` writes the frontend's types from the Rust model; they must be committed.
+      - name: TypeScript types match the model
+        if: runner.os == 'Linux'
+        run: |
+          git status --porcelain app/ui/src/lib/bindings
+          test -z "$(git status --porcelain app/ui/src/lib/bindings)"
 
   ui:
     name: UI
@@ -54,5 +60,9 @@ jobs:
       - run: npm ci
       - name: Type-check
         run: npm run check
+      - name: Test
+        run: npm test
       - name: Build
         run: npm run build:ui
+      - name: Build the single-file page
+        run: npm run build:page

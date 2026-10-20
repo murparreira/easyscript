@@ -3,3 +3,5 @@ node_modules/
 /app/ui/dist/
 /app/src-tauri/gen/schemas/
 .DS_Store
+/app/ui/dist-page/
+/app/ui/dev/

@@ -8,19 +8,22 @@ use std::path::Path;
 use dm_syntax::ast::Line as AstLine;
 use regex::Regex;
 use serde::Serialize;
+use ts_rs::TS;
 
 use crate::config::TagKind;
 use crate::model::*;
 use crate::project::Project;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "snake_case")]
 pub enum Severity {
     Error,
     Warning,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
 pub struct Diagnostic {
     pub severity: Severity,
     /// A short stable name for the kind of problem (`unknown-jump-target`).
@@ -30,7 +33,8 @@ pub struct Diagnostic {
 }
 
 /// A place in a file: a dialogue file, the project file or a document.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, TS)]
+#[ts(export)]
 pub struct Location {
     pub path: String,
     pub line: usize,

@@ -16,6 +16,7 @@ mod lower;
 pub mod model;
 mod project;
 pub mod stats;
+pub mod view;
 
 pub use check::{Diagnostic, Severity, check};
 pub use config::Config;
@@ -23,6 +24,7 @@ pub use lower::lower;
 pub use model::Script;
 pub use project::{LoadError, Project, SourceFile};
 pub use stats::{Stats, stats};
+pub use view::{ReadView, read_view};
 
 /// Version of the core, shown by the app and the CLI.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
