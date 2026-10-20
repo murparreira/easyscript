@@ -1,0 +1,256 @@
+SOURCE_FILE@0..620
+  TITLE_LINE@0..8
+    TILDE@0..1 "~"
+    WHITESPACE@1..2 " "
+    TITLE_NAME@2..7 "start"
+    NEWLINE@7..8 "\n"
+  CONDITION_LINE@8..85
+    IF_KW@8..10 "if"
+    WHITESPACE@10..11 " "
+    EXPR@11..37
+      IDENT@11..18 "Globals"
+      DOT@18..19 "."
+      IDENT@19..23 "mode"
+      WHITESPACE@23..24 " "
+      EQ2@24..26 "=="
+      WHITESPACE@26..27 " "
+      STRING@27..37 "\"assisted\""
+    COLON@37..38 ":"
+    NEWLINE@38..39 "\n"
+    BLOCK@39..85
+      DIALOGUE_LINE@39..85
+        INDENT@39..40 "\t"
+        SPEAKER@40..49
+          TEXT@40..48 "Narrator"
+          COLON@48..49 ":"
+        WHITESPACE@49..50 " "
+        TEXT@50..84 "The map glows where y ..."
+        NEWLINE@84..85 "\n"
+  CONDITION_LINE@85..145
+    ELIF_KW@85..89 "elif"
+    WHITESPACE@89..90 " "
+    EXPR@90..108
+      IDENT@90..97 "Globals"
+      DOT@97..98 "."
+      IDENT@98..104 "visits"
+      WHITESPACE@104..105 " "
+      GT@105..106 ">"
+      WHITESPACE@106..107 " "
+      NUMBER@107..108 "2"
+    NEWLINE@108..109 "\n"
+    BLOCK@109..145
+      DIALOGUE_LINE@109..145
+        INDENT@109..110 "\t"
+        SPEAKER@110..119
+          TEXT@110..118 "Narrator"
+          COLON@118..119 ":"
+        WHITESPACE@119..120 " "
+        TEXT@120..144 "You know the way by now."
+        NEWLINE@144..145 "\n"
+  CONDITION_LINE@145..257
+    ELSE_KW@145..149 "else"
+    NEWLINE@149..150 "\n"
+    BLOCK@150..257
+      DIALOGUE_LINE@150..179
+        INDENT@150..151 "\t"
+        SPEAKER@151..160
+          TEXT@151..159 "Narrator"
+          COLON@159..160 ":"
+        WHITESPACE@160..161 " "
+        TEXT@161..178 "The fog is thick."
+        NEWLINE@178..179 "\n"
+      CONDITION_LINE@179..257
+        INDENT@179..180 "\t"
+        IF_KW@180..182 "if"
+        WHITESPACE@182..183 " "
+        EXPR@183..210
+          IDENT@183..190 "Globals"
+          DOT@190..191 "."
+          IDENT@191..199 "has_flag"
+          L_PAREN@199..200 "("
+          STRING@200..209 "\"lantern\""
+          R_PAREN@209..210 ")"
+        NEWLINE@210..211 "\n"
+        BLOCK@211..257
+          DIALOGUE_LINE@211..257
+            INDENT@211..213 "\t\t"
+            SPEAKER@213..222
+              TEXT@213..221 "Narrator"
+              COLON@221..222 ":"
+            WHITESPACE@222..223 " "
+            TEXT@223..256 "Good thing you brough ..."
+            NEWLINE@256..257 "\n"
+  BLANK_LINE@257..258
+    NEWLINE@257..258 "\n"
+  MATCH_LINE@258..393
+    MATCH_KW@258..263 "match"
+    WHITESPACE@263..264 " "
+    EXPR@264..279
+      IDENT@264..271 "Globals"
+      DOT@271..272 "."
+      IDENT@272..279 "weather"
+    NEWLINE@279..280 "\n"
+    BLOCK@280..393
+      WHEN_LINE@280..323
+        INDENT@280..281 "\t"
+        WHEN_KW@281..285 "when"
+        WHITESPACE@285..286 " "
+        EXPR@286..292
+          STRING@286..292 "\"rain\""
+        NEWLINE@292..293 "\n"
+        BLOCK@293..323
+          DIALOGUE_LINE@293..323
+            INDENT@293..295 "\t\t"
+            SPEAKER@295..302
+              TEXT@295..301 "Keeper"
+              COLON@301..302 ":"
+            WHITESPACE@302..303 " "
+            TEXT@303..322 "Close the shutters."
+            NEWLINE@322..323 "\n"
+      WHEN_LINE@323..366
+        INDENT@323..324 "\t"
+        WHEN_KW@324..328 "when"
+        WHITESPACE@328..329 " "
+        EXPR@329..344
+          STRING@329..334 "\"sun\""
+          COMMA@334..335 ","
+          WHITESPACE@335..336 " "
+          STRING@336..344 "\"clouds\""
+        NEWLINE@344..345 "\n"
+        BLOCK@345..366
+          DIALOGUE_LINE@345..366
+            INDENT@345..347 "\t\t"
+            SPEAKER@347..354
+              TEXT@347..353 "Keeper"
+              COLON@353..354 ":"
+            WHITESPACE@354..355 " "
+            TEXT@355..365 "Open them."
+            NEWLINE@365..366 "\n"
+      CONDITION_LINE@366..393
+        INDENT@366..367 "\t"
+        ELSE_KW@367..371 "else"
+        NEWLINE@371..372 "\n"
+        BLOCK@372..393
+          DIALOGUE_LINE@372..393
+            INDENT@372..374 "\t\t"
+            SPEAKER@374..381
+              TEXT@374..380 "Keeper"
+              COLON@380..381 ":"
+            WHITESPACE@381..382 " "
+            TEXT@382..392 "Who knows."
+            NEWLINE@392..393 "\n"
+  BLANK_LINE@393..394
+    NEWLINE@393..394 "\n"
+  WHILE_LINE@394..466
+    WHILE_KW@394..399 "while"
+    WHITESPACE@399..400 " "
+    EXPR@400..417
+      IDENT@400..407 "Globals"
+      DOT@407..408 "."
+      IDENT@408..413 "waves"
+      WHITESPACE@413..414 " "
+      LT@414..415 "<"
+      WHITESPACE@415..416 " "
+      NUMBER@416..417 "3"
+    NEWLINE@417..418 "\n"
+    BLOCK@418..466
+      MUTATION_LINE@418..442
+        INDENT@418..419 "\t"
+        SET_KW@419..422 "set"
+        WHITESPACE@422..423 " "
+        EXPR@423..441
+          IDENT@423..430 "Globals"
+          DOT@430..431 "."
+          IDENT@431..436 "waves"
+          WHITESPACE@436..437 " "
+          PLUS_EQ@437..439 "+="
+          WHITESPACE@439..440 " "
+          NUMBER@440..441 "1"
+        NEWLINE@441..442 "\n"
+      MUTATION_LINE@442..466
+        INDENT@442..443 "\t"
+        DO_BANG_KW@443..446 "do!"
+        WHITESPACE@446..447 " "
+        EXPR@447..465
+          IDENT@447..457 "play_sound"
+          L_PAREN@457..458 "("
+          STRING@458..464 "\"wave\""
+          R_PAREN@464..465 ")"
+        NEWLINE@465..466 "\n"
+  BLANK_LINE@466..467
+    NEWLINE@466..467 "\n"
+  RANDOM_LINE@467..499
+    RANDOM_PREFIX@467..468
+      PERCENT@467..468 "%"
+    NEWLINE@468..469 "\n"
+    BLOCK@469..499
+      DIALOGUE_LINE@469..484
+        INDENT@469..470 "\t"
+        SPEAKER@470..475
+          TEXT@470..474 "Gull"
+          COLON@474..475 ":"
+        WHITESPACE@475..476 " "
+        TEXT@476..483 "Squawk."
+        NEWLINE@483..484 "\n"
+      DIALOGUE_LINE@484..499
+        INDENT@484..485 "\t"
+        SPEAKER@485..490
+          TEXT@485..489 "Gull"
+          COLON@489..490 ":"
+        WHITESPACE@490..491 " "
+        TEXT@491..498 "SQUAWK."
+        NEWLINE@498..499 "\n"
+  DIALOGUE_LINE@499..516
+    RANDOM_PREFIX@499..502
+      PERCENT@499..500 "%"
+      NUMBER@500..501 "2"
+      WHITESPACE@501..502 " "
+    SPEAKER@502..509
+      TEXT@502..508 "Keeper"
+      COLON@508..509 ":"
+    WHITESPACE@509..510 " "
+    TEXT@510..515 "Shoo!"
+    NEWLINE@515..516 "\n"
+  DIALOGUE_LINE@516..572
+    RANDOM_PREFIX@516..549
+      PERCENT@516..517 "%"
+      WHITESPACE@517..518 " "
+      INLINE_CONDITION@518..548
+        L_BRACK@518..519 "["
+        IF_KW@519..521 "if"
+        WHITESPACE@521..522 " "
+        EXPR@522..547
+          IDENT@522..529 "Globals"
+          DOT@529..530 "."
+          IDENT@530..538 "has_flag"
+          L_PAREN@538..539 "("
+          STRING@539..546 "\"bread\""
+          R_PAREN@546..547 ")"
+        R_BRACK@547..548 "]"
+      WHITESPACE@548..549 " "
+    SPEAKER@549..554
+      TEXT@549..553 "Gull"
+      COLON@553..554 ":"
+    WHITESPACE@554..555 " "
+    TEXT@555..571 "(eyes the bread)"
+    NEWLINE@571..572 "\n"
+  GOTO_LINE@572..592
+    JUMP@572..591
+      ARROW_RETURN@572..575 "=><"
+      WHITESPACE@575..576 " "
+      JUMP_TARGET@576..591 "shared/greeting"
+    NEWLINE@591..592 "\n"
+  GOTO_LINE@592..620
+    JUMP@592..619
+      ARROW@592..594 "=>"
+      WHITESPACE@594..595 " "
+      REPLACEMENT@595..619
+        L_DBRACE@595..597 "{{"
+        WHITESPACE@597..598 " "
+        EXPR@598..616
+          IDENT@598..605 "Globals"
+          DOT@605..606 "."
+          IDENT@606..616 "next_scene"
+        WHITESPACE@616..617 " "
+        R_DBRACE@617..619 "}}"
+    NEWLINE@619..620 "\n"

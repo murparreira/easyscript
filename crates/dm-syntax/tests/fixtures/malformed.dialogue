@@ -1,0 +1,16 @@
+~
+~ bad title with spaces
+		Overindented first line
+if
+else nonsense
+do
+- [if unclosed
+Keeper: [#unclosed tag
+Keeper: {{ never closed
+Keeper: [[never|closed
+Keeper: bad $ expression [do $ ~ ]
+	- choice under dialogue
+=>
+=> 
+%abc
+%

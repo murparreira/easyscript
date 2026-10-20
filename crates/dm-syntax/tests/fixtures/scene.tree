@@ -1,0 +1,264 @@
+SOURCE_FILE@0..870
+  COMMENT_LINE@0..28
+    COMMENT@0..27 "# === LIGHTHOUSE KEEP ..."
+    NEWLINE@27..28 "\n"
+  COMMENT_LINE@28..70
+    COMMENT@28..69 "# Picked by keeper.gd ..."
+    NEWLINE@69..70 "\n"
+  BLANK_LINE@70..71
+    NEWLINE@70..71 "\n"
+  TITLE_LINE@71..86
+    TILDE@71..72 "~"
+    WHITESPACE@72..73 " "
+    TITLE_NAME@73..85 "keeper_intro"
+    NEWLINE@85..86 "\n"
+  DIALOGUE_LINE@86..144
+    SPEAKER@86..93
+      TEXT@86..92 "Keeper"
+      COLON@92..93 ":"
+    WHITESPACE@93..94 " "
+    TEXT@94..116 "Another storm tonight."
+    WHITESPACE@116..117 " "
+    TAG_GROUP@117..143
+      L_BRACK@117..118 "["
+      HASH@118..119 "#"
+      TAG@119..142
+        TAG_NAME@119..127 "reaction"
+        EQ@127..128 "="
+        TAG_VALUE@128..142 "keeper_tired_1"
+      R_BRACK@142..143 "]"
+    NEWLINE@143..144 "\n"
+  DIALOGUE_LINE@144..222
+    SPEAKER@144..151
+      TEXT@144..150 "Sailor"
+      COLON@150..151 ":"
+    WHITESPACE@151..152 " "
+    TEXT@152..178 "Is the lamp still wor ..."
+    WHITESPACE@178..179 " "
+    TAG_GROUP@179..221
+      L_BRACK@179..180 "["
+      HASH@180..181 "#"
+      TAG@181..206
+        TAG_NAME@181..189 "reaction"
+        EQ@189..190 "="
+        TAG_VALUE@190..206 "sailor_worried_1"
+      COMMA@206..207 ","
+      WHITESPACE@207..208 " "
+      TAG@208..220
+        TAG_NAME@208..212 "mood"
+        EQ@212..213 "="
+        TAG_VALUE@213..220 "anxious"
+      R_BRACK@220..221 "]"
+    NEWLINE@221..222 "\n"
+  DIALOGUE_LINE@222..301
+    SPEAKER@222..229
+      TEXT@222..228 "Keeper"
+      COLON@228..229 ":"
+    WHITESPACE@229..230 " "
+    TEXT@230..263 "Mostly. Ask me again  ..."
+    WHITESPACE@263..264 " "
+    TAG_GROUP@264..300
+      L_BRACK@264..265 "["
+      HASH@265..266 "#"
+      TAG@266..289
+        TAG_NAME@266..274 "reaction"
+        EQ@274..275 "="
+        TAG_VALUE@275..289 "keeper_tired_2"
+      COMMA@289..290 ","
+      WHITESPACE@290..291 " "
+      TAG@291..299
+        TAG_NAME@291..295 "mood"
+        EQ@295..296 "="
+        TAG_VALUE@296..299 "dry"
+      R_BRACK@299..300 "]"
+    NEWLINE@300..301 "\n"
+  MUTATION_LINE@301..336
+    DO_KW@301..303 "do"
+    WHITESPACE@303..304 " "
+    EXPR@304..335
+      IDENT@304..325 "emit_quest_npc_talked"
+      L_PAREN@325..326 "("
+      STRING@326..334 "\"keeper\""
+      R_PAREN@334..335 ")"
+    NEWLINE@335..336 "\n"
+  GOTO_LINE@336..343
+    JUMP@336..342
+      ARROW@336..338 "=>"
+      WHITESPACE@338..339 " "
+      JUMP_TARGET@339..342 "END"
+    NEWLINE@342..343 "\n"
+  BLANK_LINE@343..344
+    NEWLINE@343..344 "\n"
+  COMMENT_LINE@344..376
+    COMMENT@344..375 "## Shown once the oil ..."
+    NEWLINE@375..376 "\n"
+  TITLE_LINE@376..389
+    TILDE@376..377 "~"
+    WHITESPACE@377..378 " "
+    TITLE_NAME@378..388 "keeper_oil"
+    NEWLINE@388..389 "\n"
+  COMMENT_LINE@389..424
+    COMMENT@389..423 "# ✏ production (wor ..."
+    NEWLINE@423..424 "\n"
+  DIALOGUE_LINE@424..473
+    SPEAKER@424..431
+      TEXT@424..430 "Keeper"
+      COLON@430..431 ":"
+    WHITESPACE@431..432 " "
+    TEXT@432..445 "You found it!"
+    WHITESPACE@445..446 " "
+    TAG_GROUP@446..472
+      L_BRACK@446..447 "["
+      HASH@447..448 "#"
+      TAG@448..471
+        TAG_NAME@448..456 "reaction"
+        EQ@456..457 "="
+        TAG_VALUE@457..471 "keeper_happy_1"
+      R_BRACK@471..472 "]"
+    NEWLINE@472..473 "\n"
+  RESPONSE_LINE@473..581
+    DASH@473..474 "-"
+    WHITESPACE@474..475 " "
+    TEXT@475..492 "Hand over the oil"
+    WHITESPACE@492..493 " "
+    TAG_GROUP@493..503
+      L_BRACK@493..494 "["
+      HASH@494..495 "#"
+      TAG@495..502
+        TAG_NAME@495..502 "thought"
+      R_BRACK@502..503 "]"
+    NEWLINE@503..504 "\n"
+    BLOCK@504..581
+      DIALOGUE_LINE@504..551
+        INDENT@504..505 "\t"
+        SPEAKER@505..512
+          TEXT@505..511 "Keeper"
+          COLON@511..512 ":"
+        WHITESPACE@512..513 " "
+        TEXT@513..523 "Bless you."
+        WHITESPACE@523..524 " "
+        TAG_GROUP@524..550
+          L_BRACK@524..525 "["
+          HASH@525..526 "#"
+          TAG@526..549
+            TAG_NAME@526..534 "reaction"
+            EQ@534..535 "="
+            TAG_VALUE@535..549 "keeper_happy_2"
+          R_BRACK@549..550 "]"
+        NEWLINE@550..551 "\n"
+      MUTATION_LINE@551..581
+        INDENT@551..552 "\t"
+        DO_KW@552..554 "do"
+        WHITESPACE@554..555 " "
+        EXPR@555..580
+          IDENT@555..563 "set_flag"
+          L_PAREN@563..564 "("
+          STRING@564..579 "\"oil_delivered\""
+          R_PAREN@579..580 ")"
+        NEWLINE@580..581 "\n"
+  RESPONSE_LINE@581..728
+    DASH@581..582 "-"
+    WHITESPACE@582..583 " "
+    TEXT@583..598 "Keep it for now"
+    WHITESPACE@598..599 " "
+    INLINE_CONDITION@599..636
+      L_BRACK@599..600 "["
+      IF_KW@600..602 "if"
+      WHITESPACE@602..603 " "
+      EXPR@603..635
+        NOT_KW@603..606 "not"
+        WHITESPACE@606..607 " "
+        IDENT@607..614 "Globals"
+        DOT@614..615 "."
+        IDENT@615..623 "has_flag"
+        L_PAREN@623..624 "("
+        STRING@624..634 "\"promised\""
+        R_PAREN@634..635 ")"
+      R_BRACK@635..636 "]"
+    NEWLINE@636..637 "\n"
+    BLOCK@637..728
+      DIALOGUE_LINE@637..664
+        INDENT@637..641 "    "
+        SPEAKER@641..648
+          TEXT@641..647 "Keeper"
+          COLON@647..648 ":"
+        WHITESPACE@648..649 " "
+        TEXT@649..663 "Suit yourself."
+        NEWLINE@663..664 "\n"
+      DIALOGUE_LINE@664..728
+        INDENT@664..665 "\t"
+        SPEAKER@665..672
+          TEXT@665..671 "Keeper"
+          COLON@671..672 ":"
+        WHITESPACE@672..673 " "
+        TEXT@673..693 "The lamp won't wait."
+        WHITESPACE@693..694 " "
+        TAG_GROUP@694..727
+          L_BRACK@694..695 "["
+          HASH@695..696 "#"
+          TAG@696..719
+            TAG_NAME@696..704 "reaction"
+            EQ@704..705 "="
+            TAG_VALUE@705..719 "keeper_tired_1"
+          COMMA@719..720 ","
+          WHITESPACE@720..721 " "
+          TAG@721..726
+            TAG_NAME@721..726 "shake"
+          R_BRACK@726..727 "]"
+        NEWLINE@727..728 "\n"
+  RESPONSE_LINE@728..764
+    DASH@728..729 "-"
+    WHITESPACE@729..730 " "
+    TEXT@730..748 "Ask about the ship"
+    WHITESPACE@748..749 " "
+    JUMP@749..763
+      ARROW@749..751 "=>"
+      WHITESPACE@751..752 " "
+      JUMP_TARGET@752..763 "keeper_ship"
+    NEWLINE@763..764 "\n"
+  GOTO_LINE@764..771
+    JUMP@764..770
+      ARROW@764..766 "=>"
+      WHITESPACE@766..767 " "
+      JUMP_TARGET@767..770 "END"
+    NEWLINE@770..771 "\n"
+  BLANK_LINE@771..772
+    NEWLINE@771..772 "\n"
+  TITLE_LINE@772..786
+    TILDE@772..773 "~"
+    WHITESPACE@773..774 " "
+    TITLE_NAME@774..785 "keeper_ship"
+    NEWLINE@785..786 "\n"
+  DIALOGUE_LINE@786..862
+    SPEAKER@786..793
+      TEXT@786..792 "Keeper"
+      COLON@792..793 ":"
+    WHITESPACE@793..794 " "
+    INLINE_RANDOM@794..808
+      L_DBRACK@794..796 "[["
+      TEXT@796..798 "Ah"
+      PIPE@798..799 "|"
+      TEXT@799..803 "Well"
+      PIPE@803..804 "|"
+      TEXT@804..806 "Hm"
+      R_DBRACK@806..808 "]]"
+    TEXT@808..819 ", the ship."
+    WHITESPACE@819..820 " "
+    REPLACEMENT@820..843
+      L_DBRACE@820..822 "{{"
+      WHITESPACE@822..823 " "
+      EXPR@823..840
+        IDENT@823..830 "Globals"
+        DOT@830..831 "."
+        IDENT@831..840 "ship_name"
+      WHITESPACE@840..841 " "
+      R_DBRACE@841..843 "}}"
+    WHITESPACE@843..844 " "
+    TEXT@844..861 "went down in '79."
+    NEWLINE@861..862 "\n"
+  GOTO_LINE@862..870
+    JUMP@862..869
+      ARROW@862..864 "=>"
+      WHITESPACE@864..865 " "
+      JUMP_TARGET@865..869 "END!"
+    NEWLINE@869..870 "\n"

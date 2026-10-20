@@ -1,0 +1,195 @@
+SOURCE_FILE@0..599
+  IMPORT_LINE@0..51
+    IMPORT_KW@0..6 "import"
+    WHITESPACE@6..7 " "
+    STRING@7..40 "\"res://dialogues/shar ..."
+    WHITESPACE@40..41 " "
+    AS_KW@41..43 "as"
+    WHITESPACE@43..44 " "
+    IDENT@44..50 "shared"
+    NEWLINE@50..51 "\n"
+  USING_LINE@51..65
+    USING_KW@51..56 "using"
+    WHITESPACE@56..57 " "
+    IDENT@57..64 "Globals"
+    NEWLINE@64..65 "\n"
+  BLANK_LINE@65..66
+    NEWLINE@65..66 "\n"
+  TITLE_LINE@66..75
+    TILDE@66..67 "~"
+    WHITESPACE@67..68 " "
+    TITLE_NAME@68..74 "inline"
+    NEWLINE@74..75 "\n"
+  DIALOGUE_LINE@75..148
+    SPEAKER@75..82
+      TEXT@75..81 "Keeper"
+      COLON@81..82 ":"
+    WHITESPACE@82..83 " "
+    BBCODE@83..96
+      L_BRACK@83..84 "["
+      BBCODE_NAME@84..88 "wave"
+      WHITESPACE@88..89 " "
+      BBCODE_ARGS@89..95 "amp=40"
+      R_BRACK@95..96 "]"
+    TEXT@96..100 "Hooo"
+    BBCODE@100..107
+      L_BRACK@100..101 "["
+      BBCODE_NAME@101..106 "/wave"
+      R_BRACK@106..107 "]"
+    TEXT@107..108 ","
+    WHITESPACE@108..109 " "
+    BBCODE@109..120
+      L_BRACK@109..110 "["
+      BBCODE_NAME@110..115 "speed"
+      BBCODE_ARGS@115..119 "=0.5"
+      R_BRACK@119..120 "]"
+    TEXT@120..126 "slowly"
+    BBCODE@126..134
+      L_BRACK@126..127 "["
+      BBCODE_NAME@127..133 "/speed"
+      R_BRACK@133..134 "]"
+    BBCODE@134..142
+      L_BRACK@134..135 "["
+      BBCODE_NAME@135..139 "wait"
+      BBCODE_ARGS@139..141 "=1"
+      R_BRACK@141..142 "]"
+    WHITESPACE@142..143 " "
+    TEXT@143..147 "now."
+    NEWLINE@147..148 "\n"
+  DIALOGUE_LINE@148..216
+    SPEAKER@148..155
+      TEXT@148..154 "Keeper"
+      COLON@154..155 ":"
+    WHITESPACE@155..156 " "
+    TEXT@156..163 "Escaped"
+    WHITESPACE@163..164 " "
+    ESCAPE@164..166 "\\["
+    TEXT@166..174 "brackets"
+    ESCAPE@174..176 "\\]"
+    WHITESPACE@176..177 " "
+    TEXT@177..188 "and a colon"
+    ESCAPE@188..190 "\\:"
+    WHITESPACE@190..191 " "
+    TEXT@191..207 "here, and a line"
+    ESCAPE@207..209 "\\n"
+    TEXT@209..215 "break."
+    NEWLINE@215..216 "\n"
+  DIALOGUE_LINE@216..244
+    PIPE@216..217 "|"
+    WHITESPACE@217..218 " "
+    SPEAKER@218..225
+      TEXT@218..224 "Sailor"
+      COLON@224..225 ":"
+    WHITESPACE@225..226 " "
+    TEXT@226..243 "At the same time."
+    NEWLINE@243..244 "\n"
+  DIALOGUE_LINE@244..329
+    SPEAKER@244..251
+      TEXT@244..250 "Keeper"
+      COLON@250..251 ":"
+    WHITESPACE@251..252 " "
+    TEXT@252..260 "Mutation"
+    WHITESPACE@260..261 " "
+    INLINE_MUTATION@261..284
+      L_BRACK@261..262 "["
+      DO_KW@262..264 "do"
+      WHITESPACE@264..265 " "
+      EXPR@265..283
+        IDENT@265..272 "Globals"
+        DOT@272..273 "."
+        IDENT@273..278 "count"
+        WHITESPACE@278..279 " "
+        PLUS_EQ@279..281 "+="
+        WHITESPACE@281..282 " "
+        NUMBER@282..283 "1"
+      R_BRACK@283..284 "]"
+    WHITESPACE@284..285 " "
+    TEXT@285..293 "mid-line"
+    INLINE_CONDITION@293..315
+      L_BRACK@293..294 "["
+      IF_KW@294..296 "if"
+      WHITESPACE@296..297 " "
+      EXPR@297..314
+        IDENT@297..304 "Globals"
+        DOT@304..305 "."
+        IDENT@305..310 "count"
+        WHITESPACE@310..311 " "
+        GT@311..312 ">"
+        WHITESPACE@312..313 " "
+        NUMBER@313..314 "1"
+      R_BRACK@314..315 "]"
+    TEXT@315..322 ", twice"
+    BBCODE@322..327
+      L_BRACK@322..323 "["
+      BBCODE_NAME@323..326 "/if"
+      R_BRACK@326..327 "]"
+    TEXT@327..328 "."
+    NEWLINE@328..329 "\n"
+  DIALOGUE_LINE@329..366
+    SPEAKER@329..336
+      TEXT@329..335 "Keeper"
+      COLON@335..336 ":"
+    WHITESPACE@336..337 " "
+    TEXT@337..348 "With an id."
+    WHITESPACE@348..349 " "
+    STATIC_ID@349..365
+      L_BRACK@349..350 "["
+      ID_KW@350..352 "ID"
+      COLON@352..353 ":"
+      ID_VALUE@353..364 "KEEPER_ID_1"
+      R_BRACK@364..365 "]"
+    NEWLINE@365..366 "\n"
+  DIALOGUE_LINE@366..412
+    SPEAKER@366..373
+      TEXT@366..372 "Keeper"
+      COLON@372..373 ":"
+    WHITESPACE@373..374 " "
+    TEXT@374..385 "Glued tags."
+    TAG_GROUP@385..411
+      L_BRACK@385..386 "["
+      HASH@386..387 "#"
+      TAG@387..410
+        TAG_NAME@387..395 "reaction"
+        EQ@395..396 "="
+        TAG_VALUE@396..410 "keeper_happy_1"
+      R_BRACK@410..411 "]"
+    NEWLINE@411..412 "\n"
+  DIALOGUE_LINE@412..446
+    ESCAPE@412..413 "\\"
+    TEXT@413..445 "- Not a choice, an es ..."
+    NEWLINE@445..446 "\n"
+  DIALOGUE_LINE@446..466
+    ESCAPE@446..447 "\\"
+    TEXT@447..465 "if not a condition"
+    NEWLINE@465..466 "\n"
+  DIALOGUE_LINE@466..495
+    TEXT@466..494 "Narration without a s ..."
+    NEWLINE@494..495 "\n"
+  DIALOGUE_LINE@495..546
+    SPEAKER@495..503
+      TEXT@495..502 "Ratio 3"
+      COLON@502..503 ":"
+    WHITESPACE@503..504 " "
+    TEXT@504..545 "2 reads as a speaker  ..."
+    NEWLINE@545..546 "\n"
+  DIALOGUE_LINE@546..592
+    SPEAKER@546..567
+      REPLACEMENT@546..566
+        L_DBRACE@546..548 "{{"
+        WHITESPACE@548..549 " "
+        EXPR@549..563
+          IDENT@549..556 "Globals"
+          DOT@556..557 "."
+          IDENT@557..563 "player"
+        WHITESPACE@563..564 " "
+        R_DBRACE@564..566 "}}"
+      COLON@566..567 ":"
+    WHITESPACE@567..568 " "
+    TEXT@568..591 "Named by an expression."
+    NEWLINE@591..592 "\n"
+  GOTO_LINE@592..599
+    JUMP@592..598
+      ARROW@592..594 "=>"
+      WHITESPACE@594..595 " "
+      JUMP_TARGET@595..598 "END"
+    NEWLINE@598..599 "\n"

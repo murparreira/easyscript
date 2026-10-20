@@ -1,0 +1,91 @@
+SOURCE_FILE@0..231
+  DIALOGUE_LINE@0..2
+    TEXT@0..1 "~"
+    NEWLINE@1..2 "\n"
+  TITLE_LINE@2..52
+    TILDE@2..3 "~"
+    WHITESPACE@3..4 " "
+    TITLE_NAME@4..25 "bad title with spaces"
+    NEWLINE@25..26 "\n"
+    BLOCK@26..52
+      DIALOGUE_LINE@26..52
+        INDENT@26..28 "\t\t"
+        TEXT@28..51 "Overindented first line"
+        NEWLINE@51..52 "\n"
+  DIALOGUE_LINE@52..55
+    TEXT@52..54 "if"
+    NEWLINE@54..55 "\n"
+  CONDITION_LINE@55..69
+    ELSE_KW@55..59 "else"
+    WHITESPACE@59..60 " "
+    EXPR@60..68
+      IDENT@60..68 "nonsense"
+    NEWLINE@68..69 "\n"
+  DIALOGUE_LINE@69..72
+    TEXT@69..71 "do"
+    NEWLINE@71..72 "\n"
+  RESPONSE_LINE@72..87
+    DASH@72..73 "-"
+    WHITESPACE@73..74 " "
+    TEXT@74..86 "[if unclosed"
+    NEWLINE@86..87 "\n"
+  DIALOGUE_LINE@87..110
+    SPEAKER@87..94
+      TEXT@87..93 "Keeper"
+      COLON@93..94 ":"
+    WHITESPACE@94..95 " "
+    TEXT@95..109 "[#unclosed tag"
+    NEWLINE@109..110 "\n"
+  DIALOGUE_LINE@110..134
+    SPEAKER@110..117
+      TEXT@110..116 "Keeper"
+      COLON@116..117 ":"
+    WHITESPACE@117..118 " "
+    TEXT@118..133 "{{ never closed"
+    NEWLINE@133..134 "\n"
+  DIALOGUE_LINE@134..157
+    SPEAKER@134..141
+      TEXT@134..140 "Keeper"
+      COLON@140..141 ":"
+    WHITESPACE@141..142 " "
+    TEXT@142..156 "[[never|closed"
+    NEWLINE@156..157 "\n"
+  DIALOGUE_LINE@157..217
+    SPEAKER@157..164
+      TEXT@157..163 "Keeper"
+      COLON@163..164 ":"
+    WHITESPACE@164..165 " "
+    TEXT@165..181 "bad $ expression"
+    WHITESPACE@181..182 " "
+    INLINE_MUTATION@182..191
+      L_BRACK@182..183 "["
+      DO_KW@183..185 "do"
+      WHITESPACE@185..186 " "
+      EXPR@186..189
+        ERROR@186..187 "$"
+        WHITESPACE@187..188 " "
+        ERROR@188..189 "~"
+      WHITESPACE@189..190 " "
+      R_BRACK@190..191 "]"
+    NEWLINE@191..192 "\n"
+    BLOCK@192..217
+      RESPONSE_LINE@192..217
+        INDENT@192..193 "\t"
+        DASH@193..194 "-"
+        WHITESPACE@194..195 " "
+        TEXT@195..216 "choice under dialogue"
+        NEWLINE@216..217 "\n"
+  DIALOGUE_LINE@217..220
+    TEXT@217..219 "=>"
+    NEWLINE@219..220 "\n"
+  DIALOGUE_LINE@220..224
+    TEXT@220..222 "=>"
+    WHITESPACE@222..223 " "
+    NEWLINE@223..224 "\n"
+  DIALOGUE_LINE@224..229
+    TEXT@224..228 "%abc"
+    NEWLINE@228..229 "\n"
+  RANDOM_LINE@229..231
+    RANDOM_PREFIX@229..230
+      PERCENT@229..230 "%"
+    NEWLINE@230..231 "\n"

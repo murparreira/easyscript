@@ -1,0 +1,43 @@
+SOURCE_FILE@0..97
+  TITLE_LINE@0..8
+    TILDE@0..1 "~"
+    WHITESPACE@1..2 " "
+    TITLE_NAME@2..6 "crlf"
+    NEWLINE@6..8 "\r\n"
+  DIALOGUE_LINE@8..66
+    SPEAKER@8..15
+      TEXT@8..14 "Keeper"
+      COLON@14..15 ":"
+    WHITESPACE@15..16 " "
+    TEXT@16..37 "Windows line endings."
+    WHITESPACE@37..38 " "
+    TAG_GROUP@38..64
+      L_BRACK@38..39 "["
+      HASH@39..40 "#"
+      TAG@40..63
+        TAG_NAME@40..48 "reaction"
+        EQ@48..49 "="
+        TAG_VALUE@49..63 "keeper_happy_1"
+      R_BRACK@63..64 "]"
+    NEWLINE@64..66 "\r\n"
+  RESPONSE_LINE@66..89
+    DASH@66..67 "-"
+    WHITESPACE@67..68 " "
+    TEXT@68..71 "Yes"
+    NEWLINE@71..73 "\r\n"
+    BLOCK@73..89
+      DIALOGUE_LINE@73..89
+        INDENT@73..74 "\t"
+        SPEAKER@74..81
+          TEXT@74..80 "Keeper"
+          COLON@80..81 ":"
+        WHITESPACE@81..82 " "
+        TEXT@82..87 "Good."
+        NEWLINE@87..89 "\r\n"
+  BLANK_LINE@89..91
+    NEWLINE@89..91 "\r\n"
+  GOTO_LINE@91..97
+    JUMP@91..97
+      ARROW@91..93 "=>"
+      WHITESPACE@93..94 " "
+      JUMP_TARGET@94..97 "END"

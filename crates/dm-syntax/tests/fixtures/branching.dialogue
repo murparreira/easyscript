@@ -1,0 +1,29 @@
+~ start
+if Globals.mode == "assisted":
+	Narrator: The map glows where you should go.
+elif Globals.visits > 2
+	Narrator: You know the way by now.
+else
+	Narrator: The fog is thick.
+	if Globals.has_flag("lantern")
+		Narrator: Good thing you brought a lantern.
+
+match Globals.weather
+	when "rain"
+		Keeper: Close the shutters.
+	when "sun", "clouds"
+		Keeper: Open them.
+	else
+		Keeper: Who knows.
+
+while Globals.waves < 3
+	set Globals.waves += 1
+	do! play_sound("wave")
+
+%
+	Gull: Squawk.
+	Gull: SQUAWK.
+%2 Keeper: Shoo!
+% [if Globals.has_flag("bread")] Gull: (eyes the bread)
+=>< shared/greeting
+=> {{ Globals.next_scene }}

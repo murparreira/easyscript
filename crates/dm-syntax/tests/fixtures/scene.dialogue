@@ -1,0 +1,26 @@
+# === LIGHTHOUSE KEEPER ===
+# Picked by keeper.gd on the first visit.
+
+~ keeper_intro
+Keeper: Another storm tonight. [#reaction=keeper_tired_1]
+Sailor: Is the lamp still working? [#reaction=sailor_worried_1, mood=anxious]
+Keeper: Mostly. Ask me again at midnight. [#reaction=keeper_tired_2, mood=dry]
+do emit_quest_npc_talked("keeper")
+=> END
+
+## Shown once the oil is found.
+~ keeper_oil
+# ✏ production (wording pending)
+Keeper: You found it! [#reaction=keeper_happy_1]
+- Hand over the oil [#thought]
+	Keeper: Bless you. [#reaction=keeper_happy_2]
+	do set_flag("oil_delivered")
+- Keep it for now [if not Globals.has_flag("promised")]
+    Keeper: Suit yourself.
+	Keeper: The lamp won't wait. [#reaction=keeper_tired_1, shake]
+- Ask about the ship => keeper_ship
+=> END
+
+~ keeper_ship
+Keeper: [[Ah|Well|Hm]], the ship. {{ Globals.ship_name }} went down in '79.
+=> END!

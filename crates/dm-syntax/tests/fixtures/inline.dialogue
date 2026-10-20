@@ -1,0 +1,16 @@
+import "res://dialogues/shared.dialogue" as shared
+using Globals
+
+~ inline
+Keeper: [wave amp=40]Hooo[/wave], [speed=0.5]slowly[/speed][wait=1] now.
+Keeper: Escaped \[brackets\] and a colon\: here, and a line\nbreak.
+| Sailor: At the same time.
+Keeper: Mutation [do Globals.count += 1] mid-line[if Globals.count > 1], twice[/if].
+Keeper: With an id. [ID:KEEPER_ID_1]
+Keeper: Glued tags.[#reaction=keeper_happy_1]
+\- Not a choice, an escaped dash.
+\if not a condition
+Narration without a speaker.
+Ratio 3: 2 reads as a speaker in Dialogue Manager.
+{{ Globals.player }}: Named by an expression.
+=> END

@@ -4,7 +4,7 @@ A desktop workbench for game scripts. It opens a game project's own dialogue fil
 
 First format: [Dialogue Manager](https://github.com/nathanhoad/godot_dialogue_manager) 3 `.dialogue` files (Godot 4).
 
-**Status:** M0, scaffold. Nothing reads a script yet. Plan, decisions and milestones: [`PLAN.md`](PLAN.md).
+**Status:** M1. `dm-syntax` parses `.dialogue` files into a lossless syntax tree; the app does not open a project yet. Plan, decisions and milestones: [`PLAN.md`](PLAN.md).
 
 Working name; the public name can change before release.
 
@@ -12,7 +12,7 @@ Working name; the public name can change before release.
 
 ```
 crates/
-  dm-syntax/   lossless syntax tree for .dialogue (M1)
+  dm-syntax/   lossless syntax tree for .dialogue
   core/        the script model, checks, stats (M2)
   cli/         `dialogue-maker` command line (M2)
 app/
