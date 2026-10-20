@@ -1,0 +1,17 @@
+[package]
+name = "dm-cli"
+description = "dialogue-maker command line: check, stats, build, export"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "dialogue-maker"
+path = "src/main.rs"
+
+[dependencies]
+dm-core.workspace = true
+
+[lints]
+workspace = true

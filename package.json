@@ -1,0 +1,16 @@
+{
+  "name": "dialogue-maker",
+  "private": true,
+  "workspaces": [
+    "app/ui"
+  ],
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "check": "npm run check -w app/ui",
+    "build:ui": "npm run build -w app/ui"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.12.3"
+  }
+}

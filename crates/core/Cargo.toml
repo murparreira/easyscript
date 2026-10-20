@@ -1,0 +1,10 @@
+[package]
+name = "dm-core"
+description = "The dialogue-maker script model, checks and stats"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
