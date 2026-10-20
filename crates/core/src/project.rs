@@ -69,6 +69,19 @@ impl Project {
             }
             None => Config::default(),
         };
+        Self::with_config(root, config, config_path)
+    }
+
+    /// Load the project at `root` with a project file already read (`config_path` is
+    /// where it lives, for paths relative to it).
+    pub fn with_config(
+        root: &Path,
+        config: Config,
+        config_path: Option<PathBuf>,
+    ) -> Result<Self, LoadError> {
+        if !root.is_dir() {
+            return Err(LoadError::NoRoot(root.to_owned()));
+        }
         let compiled = config
             .compile()
             .map_err(|e| LoadError::Config(config_path.clone().unwrap_or_default(), e))?;

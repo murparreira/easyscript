@@ -13,6 +13,7 @@
 pub mod check;
 pub mod config;
 pub mod edit;
+pub mod init;
 mod lower;
 pub mod model;
 mod project;

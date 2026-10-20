@@ -45,6 +45,16 @@ enum Command {
         #[arg(long, hide = true, requires = "json")]
         editing: bool,
     },
+    /// Draft a project file (`dialogue-maker.toml`) for a project that has none, from what
+    /// its dialogue says: characters, tags, flag functions, section headers.
+    Init {
+        /// The project's root folder.
+        #[arg(default_value = ".")]
+        path: PathBuf,
+        /// Print the draft instead of writing it.
+        #[arg(long)]
+        stdout: bool,
+    },
     /// Count labels, lines, choices, speakers and tags.
     Stats {
         #[command(flatten)]
@@ -149,6 +159,32 @@ fn main() -> ExitCode {
                 view.stats.lines,
                 view.problems.len()
             );
+            ExitCode::SUCCESS
+        }
+        Command::Init { path, stdout } => {
+            let target = path.join(dm_core::config::FILE_NAME);
+            if !stdout && target.exists() {
+                eprintln!(
+                    "dialogue-maker: {} already exists; it is left as it is",
+                    target.display()
+                );
+                return ExitCode::from(2);
+            }
+            let draft = match dm_core::init::draft(&path) {
+                Ok(d) => d,
+                Err(e) => {
+                    eprintln!("dialogue-maker: {e}");
+                    return ExitCode::from(2);
+                }
+            };
+            if stdout {
+                print(&draft);
+            } else if let Err(e) = std::fs::write(&target, draft) {
+                eprintln!("dialogue-maker: {}: {e}", target.display());
+                return ExitCode::from(2);
+            } else {
+                eprintln!("wrote {}: a draft to check and edit", target.display());
+            }
             ExitCode::SUCCESS
         }
         Command::Stats { project, json } => {

@@ -32,6 +32,7 @@ The command line:
 dialogue-maker check path/to/game     # problems, compiler style; exit 1 on errors
 dialogue-maker stats path/to/game     # labels, lines, choices, speakers, tags
 dialogue-maker build path/to/game -o script.html   # the app's read view as one offline page
+dialogue-maker init path/to/game      # a first dialogue-maker.toml, drafted from the dialogue
 ```
 
 All read `dialogue-maker.toml` at the game's root, or the file given with `--config`. See [the project file](docs/project-file.md).
