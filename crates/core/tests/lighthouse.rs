@@ -231,3 +231,21 @@ fn read_view() {
     assert_eq!(view.documents.len(), 1, "the missing document is left out");
     assert_eq!(view.problems.len(), 17);
 }
+
+#[test]
+fn flow() {
+    let project = load();
+    let script = lower(&project);
+    let flow = dm_core::flow::flow(&project, &script);
+    let edges: Vec<String> = flow
+        .edges
+        .iter()
+        .map(|e| format!("{} -> {} ({:?})", e.from, e.to, e.kind))
+        .collect();
+    expect![[r#"
+        0:keeper_intro -> 0:keeper_bye (Choice)
+        0:storm_night -> 0:falls_in (FallThrough)
+        0:keeper_intro -> 1:tower_top (Flag)"#]]
+    .assert_eq(&edges.join("\n"));
+    expect!["0:keeper_intro 0:gull_1 0:storm_night 1:tower_top"].assert_eq(&flow.entries.join(" "));
+}

@@ -1526,3 +1526,249 @@ fieldset.voices {
   flex-wrap: wrap;
   gap: 4px 12px;
 }
+
+/* the story map */
+.map-page {
+  max-width: none;
+  padding-block: 18px 80px;
+}
+
+.map-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.map-bar select {
+  font: 0.82rem var(--ui);
+  margin-left: 4px;
+}
+
+.kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.edge-key {
+  display: inline-block;
+  width: 22px;
+  height: 0;
+  border-top: 2px solid var(--pencil);
+  vertical-align: middle;
+}
+
+.edge-key.choice {
+  border-top-color: var(--accent);
+}
+
+.edge-key.conditional {
+  border-top-style: dashed;
+}
+
+.edge-key.return {
+  border-top-style: dotted;
+}
+
+.edge-key.fall_through {
+  border-top-width: 1px;
+  border-top-color: var(--rule);
+}
+
+.edge-key.flag {
+  border-top-color: var(--thought);
+}
+
+.map-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.map-layout.with-doc {
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 380px);
+}
+
+.map-scroll {
+  overflow: auto;
+  max-height: calc(100vh - 170px);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--sheet);
+}
+
+.map-doc {
+  max-height: calc(100vh - 170px);
+  overflow: auto;
+  font-size: 0.9rem;
+  padding-right: 6px;
+}
+
+.map-doc h1 {
+  font-size: 1.4rem;
+}
+
+.map-link {
+  font: 0.86em var(--mono);
+  color: var(--accent);
+  background: none;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  padding: 0;
+  cursor: pointer;
+}
+
+.col-bg {
+  fill: var(--paper);
+}
+
+.col-group {
+  font: 700 10px var(--ui);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  fill: var(--accent);
+}
+
+.col-name {
+  font: 700 14px var(--ui);
+  fill: var(--ink);
+}
+
+.map-node {
+  cursor: pointer;
+}
+
+.map-node rect {
+  fill: var(--sheet);
+  stroke: var(--rule);
+}
+
+.map-node.entry rect {
+  stroke: var(--ink);
+}
+
+.map-node text {
+  font: 11px var(--mono);
+  fill: var(--ink);
+}
+
+.map-node .count {
+  text-anchor: end;
+  fill: var(--pencil);
+  font-size: 10px;
+}
+
+.map-node:hover rect,
+.map-node:focus rect {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.map-node.lit rect {
+  fill: var(--hl);
+}
+
+.map-node.dim {
+  opacity: 0.25;
+}
+
+.edge {
+  fill: none;
+  stroke: var(--pencil);
+  stroke-width: 1.5;
+}
+
+.edge.choice {
+  stroke: var(--accent);
+}
+
+.edge.conditional {
+  stroke-dasharray: 5 4;
+}
+
+.edge.return {
+  stroke-dasharray: 2 3;
+}
+
+.edge.fall_through {
+  stroke: var(--rule);
+  stroke-width: 1;
+}
+
+.edge.flag {
+  stroke: var(--thought);
+  stroke-width: 1.2;
+}
+
+.edge.dim {
+  opacity: 0.12;
+}
+
+.arrow-head {
+  fill: var(--pencil);
+}
+
+.map-legend {
+  margin-top: 10px;
+}
+
+table.grid {
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.grid th,
+.grid td {
+  border: 1px solid var(--rule);
+  padding: 3px 6px;
+  text-align: center;
+}
+
+.grid thead th {
+  height: 130px;
+  vertical-align: bottom;
+  white-space: nowrap;
+}
+
+.grid thead th span {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-weight: 600;
+}
+
+.grid tbody th {
+  text-align: left;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.grid td {
+  min-width: 28px;
+  font-variant-numeric: tabular-nums;
+  background: color-mix(in srgb, var(--accent) calc(var(--heat, 0) * 70%), transparent);
+}
+
+.grid td.zero {
+  background: none;
+}
+
+.grid td.total {
+  font-weight: 700;
+  background: none;
+}
+
+.grid td.flagcell {
+  color: var(--thought);
+  letter-spacing: 2px;
+}
+
+.grid-wrap {
+  max-height: calc(100vh - 170px);
+}
+
+.map-node.unreached rect {
+  stroke: var(--error);
+  stroke-dasharray: 4 3;
+}

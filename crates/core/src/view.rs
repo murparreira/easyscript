@@ -12,6 +12,7 @@ use ts_rs::TS;
 
 use crate::check::{Diagnostic, check};
 use crate::config::TagKind;
+use crate::flow::{Flow, flow};
 use crate::lower::lower;
 use crate::model::{FlagAccess, Script};
 use crate::project::Project;
@@ -34,6 +35,8 @@ pub struct ReadView {
     pub images: BTreeMap<String, String>,
     pub stats: Stats,
     pub problems: Vec<Diagnostic>,
+    /// How the story moves between labels.
+    pub flow: Flow,
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
@@ -246,6 +249,7 @@ fn build(project: &Project, editing: bool) -> ReadView {
         images,
         stats,
         problems,
+        flow: flow(project, &script),
         script,
     }
 }

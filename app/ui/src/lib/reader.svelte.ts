@@ -30,6 +30,8 @@ export class Reader {
   variants: Record<string, VariantChoice> = $state({});
   showIds = $state(true);
   showMarks = $state(false);
+  /** What the reader looks at: the script, the story map, or (in the app) the project file. */
+  tab: "script" | "map" | "project" = $state("script");
 
   /** The search, normalized; searching starts at two characters. */
   q: string;
@@ -115,6 +117,15 @@ export class Reader {
     }
     const portrait = speaker ? this.characters.get(speaker)?.portrait : null;
     return portrait ? (this.imageClasses.get(portrait) ?? null) : null;
+  }
+
+  /** Show a label in the script: from the map, or a link elsewhere. */
+  goTo(label: string) {
+    this.tab = "script";
+    setTimeout(() => {
+      location.hash = `l-${label}`;
+      document.getElementById(`l-${label}`)?.scrollIntoView({ block: "start", behavior: "instant" });
+    }, 0);
   }
 
   /** Tags shown a certain way (`thought`, `shake`, `voice`). */

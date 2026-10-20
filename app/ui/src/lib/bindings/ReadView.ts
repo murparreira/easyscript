@@ -4,6 +4,7 @@ import type { Diagnostic } from "./Diagnostic";
 import type { DocumentView } from "./DocumentView";
 import type { FlagFunctions } from "./FlagFunctions";
 import type { FlagView } from "./FlagView";
+import type { Flow } from "./Flow";
 import type { PlaceView } from "./PlaceView";
 import type { Script } from "./Script";
 import type { Stats } from "./Stats";
@@ -18,4 +19,8 @@ flag_functions: FlagFunctions, documents: Array<DocumentView>,
 /**
  * Small versions of faces and portraits, by their path in the project, as data URIs.
  */
-images: { [key in string]: string }, stats: Stats, problems: Array<Diagnostic>, };
+images: { [key in string]: string }, stats: Stats, problems: Array<Diagnostic>, 
+/**
+ * How the story moves between labels.
+ */
+flow: Flow, };

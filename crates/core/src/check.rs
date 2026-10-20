@@ -11,6 +11,7 @@ use serde::Serialize;
 use ts_rs::TS;
 
 use crate::config::TagKind;
+use crate::flow::{CodeNames, falls_through};
 use crate::model::*;
 use crate::project::Project;
 
@@ -520,58 +521,6 @@ fn titles(lines: impl Iterator<Item = AstLine>) -> HashSet<String> {
             _ => None,
         })
         .collect()
-}
-
-/// Can the flow run off the end of these nodes into what follows?
-fn falls_through(nodes: &[Node]) -> bool {
-    !matches!(
-        nodes.last().map(|n| &n.kind),
-        Some(NodeKind::Jump(Jump { returns: false, .. }))
-    )
-}
-
-/// The strings in quotes in the game's code: names it may start a label by.
-struct CodeNames {
-    exact: HashSet<String>,
-    /// Strings with format placeholders (`"urso_generico_%d"`, `"{npc}_talk"`) as patterns.
-    templates: Vec<Regex>,
-}
-
-impl CodeNames {
-    fn read(files: &[(String, String)]) -> Self {
-        let quoted = Regex::new(r#""([^"\\\r\n]*)"|'([^'\\\r\n]*)'"#).expect("valid regex");
-        let placeholder =
-            Regex::new(r"%[-+ 0#]*\d*(?:\.\d+)?[sdifxXo]|\{[A-Za-z0-9_]*\}").expect("valid regex");
-        let mut names = Self {
-            exact: HashSet::new(),
-            templates: Vec::new(),
-        };
-        let strings = files.iter().flat_map(|(_, text)| {
-            quoted
-                .captures_iter(text)
-                .filter_map(|c| c.get(1).or_else(|| c.get(2)))
-        });
-        for string in strings.map(|m| m.as_str()) {
-            if !placeholder.is_match(string) {
-                names.exact.insert(string.to_owned());
-                continue;
-            }
-            // Only templates that could be a name: identifier characters around the placeholders.
-            let literal = placeholder.replace_all(string, "");
-            if literal.len() < 3 || !literal.chars().all(|c| c.is_alphanumeric() || c == '_') {
-                continue;
-            }
-            let parts: Vec<String> = placeholder.split(string).map(regex::escape).collect();
-            if let Ok(template) = Regex::new(&format!("^{}$", parts.join(".+"))) {
-                names.templates.push(template);
-            }
-        }
-        names
-    }
-
-    fn names(&self, label: &str) -> bool {
-        self.exact.contains(label) || self.templates.iter().any(|t| t.is_match(label))
-    }
 }
 
 fn for_each_node(script: &Script, mut visit: impl FnMut(&Node)) {

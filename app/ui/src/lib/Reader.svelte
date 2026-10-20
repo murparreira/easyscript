@@ -8,6 +8,7 @@
   import FlagsTable from "./FlagsTable.svelte";
   import PlaceSection from "./PlaceSection.svelte";
   import ProjectPanel from "./ProjectPanel.svelte";
+  import StoryMap from "./StoryMap.svelte";
   import ProblemsSection from "./ProblemsSection.svelte";
   import { Reader, provideReader, type VariantChoice } from "./reader.svelte";
   import StatsSection from "./StatsSection.svelte";
@@ -102,13 +103,12 @@
         <button type="button" aria-pressed={choice === "false"} onclick={() => choose(variant.name, "false")}>{variant.if_false}</button>
       </div>
     {/each}
-    {#if editor}
-      <div class="seg" role="group" aria-label="Work on">
-        <button type="button" aria-pressed={editor.tab === "script"} onclick={() => editor && (editor.tab = "script")}>Script</button>
-        <button type="button" aria-pressed={editor.tab === "project"} onclick={() => editor && (editor.tab = "project")}>Project</button>
-      </div>
-      {#if editor.tab === "script"}<label class="tog edit-toggle"><input type="checkbox" bind:checked={editor.on} /> Edit</label>{/if}
-    {/if}
+    <div class="seg" role="group" aria-label="Look at">
+      <button type="button" aria-pressed={reader.tab === "script"} onclick={() => (reader.tab = "script")}>Script</button>
+      <button type="button" aria-pressed={reader.tab === "map"} onclick={() => (reader.tab = "map")}>Story map</button>
+      {#if editor}<button type="button" aria-pressed={reader.tab === "project"} onclick={() => (reader.tab = "project")}>Project</button>{/if}
+    </div>
+    {#if editor && reader.tab === "script"}<label class="tog edit-toggle"><input type="checkbox" bind:checked={editor.on} /> Edit</label>{/if}
     <label class="tog"><input type="checkbox" bind:checked={reader.showIds} /> Ids and file names</label>
     <label class="tog"><input type="checkbox" bind:checked={reader.showMarks} /> Highlight marked lines</label>
     {#if reader.searching}
@@ -117,8 +117,10 @@
   </div>
 </div>
 
-{#if editor?.tab === "project"}
+{#if editor && reader.tab === "project"}
   <div class="layout single gut editing"><main><ProjectPanel /></main></div>
+{:else if reader.tab === "map"}
+  <StoryMap />
 {:else}
 <div class="layout gut" class:no-ids={!reader.showIds} class:show-marks={reader.showMarks} class:editing={editor?.on}>
   <Toc />

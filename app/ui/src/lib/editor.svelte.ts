@@ -14,8 +14,6 @@ export type Target = { file: number; at: number; mode: "edit" | "before" | "afte
 
 export class Editor {
   state: EditState = $state({ changed: [], conflicts: [], can_undo: false, can_redo: false, project_file: "", has_project_file: false });
-  /** What the reader works on: the script, or the project file's builders. */
-  tab: "script" | "project" = $state("script");
   /** Edit mode: lines can be opened and changed. */
   on = $state(false);
   target: Target | null = $state(null);

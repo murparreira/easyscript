@@ -4,7 +4,7 @@ A desktop workbench for game scripts. It opens a game project's own dialogue fil
 
 First format: [Dialogue Manager](https://github.com/nathanhoad/godot_dialogue_manager) 3 `.dialogue` files (Godot 4).
 
-**Status:** M5. The app opens a project, shows its whole script, and edits it: lines, choices, speakers, faces, tags and conditions, written back only on save and only where they changed. Its Project tab edits the project file itself (characters, tags, flags, places, variants), keeping its comments, and drafts one for a project that has none. The command line checks the script, counts it, and writes it as one HTML page. Plan, decisions and milestones: [`PLAN.md`](PLAN.md).
+**Status:** M6. The app opens a project, shows its whole script, and edits it: lines, choices, speakers, faces, tags and conditions, written back only on save and only where they changed. Its Project tab edits the project file itself (characters, tags, flags, places, variants), keeping its comments, and drafts one for a project that has none. The command line checks the script, counts it, and writes it as one HTML page. Plan, decisions and milestones: [`PLAN.md`](PLAN.md).
 
 Working name; the public name can change before release.
 
@@ -23,6 +23,8 @@ app/
 ## Use
 
 The app: open a game project's folder (or start it with one, `dm-app path/to/game`). It shows the script by place, with search, the project's variant filters, faces, links between labels, its documents, a flags index and who talks; it reloads when a file changes on disk.
+
+The **Story map** shows it at a glance: labels place by place, the jumps, choices and flags between them, where the game starts them and which nothing reaches, with the walkthrough beside it; and grids of who speaks where and which flags each place sets and reads.
 
 Turn on **Edit** to change it: open a line or choice (✎, or double-click) to change its speaker, words, face, voice, thought or shake, or a choice's condition, with a preview of the balloon; add lines and choices, move them, remove them; edit `if`/`when` conditions with the project's flags at hand. The **Project** tab edits the project file the same way: characters (with the speakers no character claims yet, and the faces each one's lines use), the tag schema with each tag's use, what each flag means, places and variants; or, for a project with none, drafts one from the dialogue. Edits stay in the app until **Save**, which shows the change to each file first (**Review**), writes only the files you changed, and only the lines you changed in them. A file that changed on disk since it was read (the Godot editor saved it, a `git pull`) is never written over: the save is refused, your edits are kept, and you choose. Undo and redo with Ctrl+Z and Ctrl+Shift+Z; save with Ctrl+S.
 
