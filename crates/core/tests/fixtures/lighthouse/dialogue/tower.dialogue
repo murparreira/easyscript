@@ -1,0 +1,8 @@
+~ tower_top
+Keeper: The lamp. [#face=keeper_calm]
+if has_flag("asked")
+	Keeper: You found the oil.
+else
+	Keeper: Still dark.
+do set_flag($)
+=> END

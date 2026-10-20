@@ -4,7 +4,7 @@ A desktop workbench for game scripts. It opens a game project's own dialogue fil
 
 First format: [Dialogue Manager](https://github.com/nathanhoad/godot_dialogue_manager) 3 `.dialogue` files (Godot 4).
 
-**Status:** M1. `dm-syntax` parses `.dialogue` files into a lossless syntax tree; the app does not open a project yet. Plan, decisions and milestones: [`PLAN.md`](PLAN.md).
+**Status:** M2. The command line checks and counts a project's script; the app does not open a project yet. Plan, decisions and milestones: [`PLAN.md`](PLAN.md).
 
 Working name; the public name can change before release.
 
@@ -13,12 +13,21 @@ Working name; the public name can change before release.
 ```
 crates/
   dm-syntax/   lossless syntax tree for .dialogue
-  core/        the script model, checks, stats (M2)
-  cli/         `dialogue-maker` command line (M2)
+  core/        the script model, the project file, checks, stats
+  cli/         `dialogue-maker` command line
 app/
   src-tauri/   Tauri 2 desktop app over core
   ui/          Svelte 5 + Vite frontend
 ```
+
+## Use
+
+```sh
+dialogue-maker check path/to/game     # problems, compiler style; exit 1 on errors
+dialogue-maker stats path/to/game     # labels, lines, choices, speakers, tags
+```
+
+Both read `dialogue-maker.toml` at the game's root, or the file given with `--config`. See [the project file](docs/project-file.md).
 
 ## Develop
 

@@ -1,0 +1,39 @@
+# === KEEPER ===
+# Picked by keeper.gd.
+
+~ keeper_intro
+# The first talk.
+Keeper: Another storm. [#face=keeper_calm, mood=calm]
+Sailor: Is the lamp working? [#face=sailor_worried]
+Stranger: Who are you?
+Keeper: Hm. [#mood=sleepy, thought=yes, volume=11]
+- Ask about the oil [if not has_flag("asked")]
+	Keeper: In the shed.
+	do set_flag("asked")
+# ✏ prod (wording pending)
+- Leave => keeper_bye
+=> nowhere
+
+~ keeper_bye
+Keeper: Bye. [#face=keeper_calm]
+=> END
+
+# Nobody calls this one.
+~ forgotten
+Keeper: Nobody comes here. [#face=keeper_calm]
+=> END
+
+# === BIRDS ===
+
+~ gull_1
+Gull: Squawk. [#thought]
+=> END
+
+~ storm_night
+Keeper: Rain. [#face=keeper_calm]
+~ falls_in
+Keeper: The label above runs into this one.
+=> END
+~ keeper_intro
+Keeper: A second title with the same name.
+=> END

@@ -1,0 +1,60 @@
+name = "Lighthouse"
+section_header = '^# =+ (?P<title>.*?) *=*$'
+
+[sources]
+dialogue = ["dialogue/**/*.dialogue"]
+code = ["code/**/*.gd"]
+
+[checks]
+entry_points = ["storm_*"]
+
+[[places]]
+id = "pier"
+name = "The Pier"
+group = "Harbour"
+files = ["dialogue/pier.dialogue"]
+
+[[places]]
+id = "tower"
+name = "The Tower"
+group = "Cliff"
+files = ["dialogue/tower.dialogue", "dialogue/missing.dialogue"]
+labels = ["tower_top", "no_such_label"]
+
+[[characters]]
+id = "keeper"
+name = "The Keeper"
+speakers = ["Keeper"]
+portrait = "faces/keeper_calm.png"
+
+[[characters]]
+id = "sailor"
+name = "Sailor"
+speakers = ["Sailor"]
+portrait = "faces/sailor.png"
+
+[tags.face]
+kind = "asset"
+path = "faces/{value}.png"
+
+[tags.mood]
+kind = "enum"
+values = ["calm", "angry"]
+
+[tags.thought]
+kind = "flag"
+show = "thought"
+
+[[marks]]
+marker = "✏ prod"
+who = "production"
+
+[flags]
+set = ["set_flag"]
+read = ["has_flag"]
+
+[[documents]]
+path = "docs/walkthrough.md"
+
+[[documents]]
+path = "docs/missing.md"
