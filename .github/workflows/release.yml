@@ -80,7 +80,8 @@ jobs:
       - name: Package
         shell: bash
         run: |
-          name="dialogue-maker-cli-${RUNNER_OS,,}-${RUNNER_ARCH,,}"
+          # macOS's bash 3.2 has no ${VAR,,}.
+          name="$(echo "dialogue-maker-cli-$RUNNER_OS-$RUNNER_ARCH" | tr '[:upper:]' '[:lower:]')"
           mkdir -p "out/$name"
           cp README.md LICENSE-MIT LICENSE-APACHE "out/$name/"
           if [ "$RUNNER_OS" = "Windows" ]; then
