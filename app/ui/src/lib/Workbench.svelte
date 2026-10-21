@@ -6,6 +6,7 @@
   import DiffPanel from "./DiffPanel.svelte";
   import { type Editor, provideEditor } from "./editor.svelte";
   import ExportDialog from "./ExportDialog.svelte";
+  import { useFonts } from "./fonts";
   import { plural, t } from "./i18n.svelte";
   import ImportDialog from "./ImportDialog.svelte";
   import ProjectPanel from "./ProjectPanel.svelte";
@@ -35,6 +36,10 @@
   document.adoptedStyleSheets = [...document.adoptedStyleSheets, faces];
   $effect(() => {
     faces.replaceSync(reader.imageCss);
+  });
+
+  $effect(() => {
+    useFonts(reader.gameFonts ? reader.view.fonts : undefined);
   });
 
   $effect(() => {

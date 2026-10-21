@@ -8,15 +8,20 @@ dialogue-maker export translation path/to/game -o translations.csv --locale en -
 dialogue-maker export voice       path/to/game -o voice.md --character keeper
 dialogue-maker export voice-csv   path/to/game -o recording.csv
 dialogue-maker export fountain    path/to/game -o script.fountain
+dialogue-maker export zip         path/to/game -o dialogue.zip
 
 dialogue-maker import story.twee -o dialogue/story.dialogue
 ```
 
-Without `-o`, the result goes to standard output. In the app, **Export…** and **Import…** in the toolbar do the same.
+Without `-o`, the result goes to standard output (a ZIP needs `-o`). In the app, **Export** and **Import** in the bar do the same.
 
 Exports read the script as it is in the app, unsaved edits included. Imports write a new file only: never over one that exists.
 
 ## Exports
+
+### The dialogue files (`zip`)
+
+The project's `.dialogue` files themselves, at their paths in the project, in a ZIP: unzipped over the game's folder, it puts each file where it was. In the app, unsaved edits are in it; the app's **Save** writes them into the game's folder instead.
 
 ### JSON (`json`)
 
@@ -63,7 +68,7 @@ The script in [Fountain](https://fountain.io), which screenwriting apps (Highlan
 
 ## Imports
 
-Each importer converts what has a match in Dialogue Manager. What does not is kept in the file as a comment, and listed as a warning with its line in the source, so nothing is dropped without a word. Titles are made from the source's names (letters, digits and `_`; accents dropped).
+A `.dialogue` file from elsewhere comes in as it is (what does not read as Dialogue Manager is listed). Each importer converts what has a match in Dialogue Manager. What does not is kept in the file as a comment, and listed as a warning with its line in the source, so nothing is dropped without a word. Titles are made from the source's names (letters, digits and `_`; accents dropped).
 
 A line reads as spoken (`Name: words`) when what is before the colon looks like a name: up to three words, each capitalised. Any other colon in narration is escaped (`\:`) so Dialogue Manager does not read a speaker into it.
 
