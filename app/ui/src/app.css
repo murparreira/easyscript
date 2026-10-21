@@ -1629,12 +1629,52 @@ table.flags {
 /* writing: the scenes, the scene, playing it */
 .write {
   display: grid;
-  grid-template-columns: 250px minmax(0, 1fr);
+  grid-template-columns: min(var(--rail-w, 250px), 40vw) minmax(0, 1fr);
   height: calc(100vh - var(--top));
 }
 
 .write.playing {
-  grid-template-columns: 250px minmax(0, 1fr) minmax(320px, 400px);
+  grid-template-columns: min(var(--rail-w, 250px), 35vw) minmax(0, 1fr) min(var(--play-w, 360px), 45vw);
+}
+
+/* A side panel and the handle that resizes it. */
+.side-wrap {
+  position: relative;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+}
+
+.side-wrap > :not(.splitter) {
+  min-width: 0;
+  min-height: 0;
+}
+
+.splitter {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  z-index: 5;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.splitter.right {
+  right: -4px;
+}
+
+.splitter.left {
+  left: -4px;
+}
+
+.splitter:hover,
+.splitter:focus-visible,
+.splitter:active {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  outline: none;
 }
 
 .rail {
@@ -2294,20 +2334,24 @@ button.pill:hover {
 }
 
 @media (max-width: 1100px) {
-  .write.playing {
-    grid-template-columns: 220px minmax(0, 1fr) 320px;
-  }
-
   .le-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
 @media (max-width: 860px) {
+  .map-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .write,
   .write.playing {
     grid-template-columns: minmax(0, 1fr);
     height: auto;
+  }
+
+  .splitter {
+    display: none;
   }
 
   .rail {
@@ -2918,8 +2962,9 @@ fieldset.voices {
 }
 
 .edge-key.fall_through {
-  border-top-width: 1px;
-  border-top-color: var(--rule);
+  border-top-width: 2px;
+  border-top-style: dotted;
+  border-top-color: var(--faint);
 }
 
 .edge-key.flag {
@@ -2928,12 +2973,145 @@ fieldset.voices {
 
 .map-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
   gap: 16px;
 }
 
-.map-layout.with-doc {
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 380px);
+.map-side {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  max-height: calc(100vh - 140px);
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.map-side > .seg {
+  justify-self: start;
+}
+
+.map-side h3 {
+  font: 800 0.72rem var(--ui);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 6px;
+}
+
+.map-picked {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: var(--sheet);
+}
+
+.map-picked h3 {
+  font: 700 1.05rem var(--mono);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.map-picked .hint {
+  margin: 0;
+}
+
+.map-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+
+.map-links li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.map-links .link {
+  font-family: var(--mono);
+}
+
+.map-key ul,
+.node-key {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.key-row {
+  display: grid;
+  grid-template-columns: auto 44px minmax(0, 1fr);
+  gap: 2px 8px;
+  align-items: center;
+  cursor: pointer;
+}
+
+.key-row .key-name {
+  font-weight: 700;
+  font-size: 0.86rem;
+}
+
+.key-row .key-says {
+  grid-column: 3;
+  font-size: 0.78rem;
+  color: var(--pencil);
+}
+
+.key-row.off {
+  opacity: 0.45;
+}
+
+.key-line {
+  overflow: visible;
+}
+
+.node-key li {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  font-size: 0.8rem;
+  color: var(--pencil);
+}
+
+.node-sample {
+  display: inline-flex;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 2px 6px;
+  font: 11px var(--mono);
+  color: var(--ink);
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+}
+
+.node-sample b {
+  font-weight: 400;
+  color: var(--pencil);
+}
+
+.node-sample.entry {
+  border-color: var(--ink);
+}
+
+.node-sample.unreached {
+  border: 1px dashed var(--error);
+}
+
+.node-sample.lit {
+  background: var(--hl);
 }
 
 .map-scroll {
@@ -3043,8 +3221,10 @@ fieldset.voices {
 }
 
 .edge.fall_through {
-  stroke: var(--rule);
+  stroke: var(--faint);
   stroke-width: 1;
+  stroke-dasharray: 1 3;
+  stroke-linecap: round;
 }
 
 .edge.flag {
@@ -3056,8 +3236,24 @@ fieldset.voices {
   opacity: 0.12;
 }
 
+.edge.lit {
+  stroke-width: 2.5;
+}
+
 .arrow-head {
   fill: var(--pencil);
+}
+
+.arrow-head.choice {
+  fill: var(--accent);
+}
+
+.arrow-head.fall_through {
+  fill: var(--faint);
+}
+
+.arrow-head.flag {
+  fill: var(--thought);
 }
 
 .map-legend {
@@ -3389,4 +3585,73 @@ table.grid {
 .catch-up.setup {
   border-color: var(--rule-strong);
   background: var(--sheet);
+}
+
+/* a line's tags, each with its value; adding one */
+.tag-edit,
+.tag-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px 2px 8px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 6px;
+  font: 0.78rem var(--mono);
+  background: var(--sheet);
+}
+
+.tag-edit .tag-name {
+  color: var(--pencil);
+}
+
+.tag-edit input,
+.tag-edit select,
+.tag-add input {
+  font: 0.78rem var(--mono);
+  padding: 1px 4px;
+  min-width: 0;
+}
+
+.tag-add {
+  padding: 3px 6px;
+}
+
+.hint.tag-new {
+  flex-basis: 100%;
+}
+
+/* a place in the scene list, and the + that adds a scene at its end */
+.rail-place-row {
+  position: relative;
+}
+
+.rail-place-row .rail-place {
+  padding-right: 30px;
+}
+
+.place-add {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 5px;
+  background: var(--sheet);
+  color: var(--ink);
+  font: 700 0.85rem/1 var(--ui);
+  cursor: pointer;
+  opacity: 0;
+}
+
+.rail-place-row:hover .place-add,
+.place-add:focus-visible {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .place-add {
+    opacity: 1;
+  }
 }

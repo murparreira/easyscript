@@ -139,6 +139,30 @@ async fn new_dialogue_file(
     .await
 }
 
+/// A file the writer picked (a portrait, a face), as a path in the project: `/`-separated,
+/// relative to its root. Refused for a file outside the project, which the game cannot ship.
+#[tauri::command]
+async fn project_path(path: String, opened: State<'_, Opened>) -> Result<String, String> {
+    with_workspace(&opened, move |ws| {
+        let canonical = |p: &Path| p.canonicalize().unwrap_or_else(|_| p.to_owned());
+        let root = canonical(ws.root());
+        let file = canonical(Path::new(&path));
+        let relative = file.strip_prefix(&root).map_err(|_| {
+            format!(
+                "{} is outside the game's folder ({}): pick a file the game has",
+                file.display(),
+                root.display()
+            )
+        })?;
+        Ok(relative
+            .components()
+            .map(|c| c.as_os_str().to_string_lossy())
+            .collect::<Vec<_>>()
+            .join("/"))
+    })
+    .await
+}
+
 /// Make edits to one file's working copy, as one step.
 #[tauri::command]
 async fn edit(path: String, edits: Vec<Edit>, opened: State<'_, Opened>) -> Result<Edited, String> {
@@ -876,6 +900,7 @@ fn app<R: Runtime>(builder: Builder<R>, github: GitHubSession) -> Builder<R> {
             edit,
             edit_project_file,
             new_dialogue_file,
+            project_path,
             draft_project_file,
             undo,
             redo,
@@ -1387,6 +1412,29 @@ mod tests {
         assert_eq!(
             std::fs::read_to_string(dir.path().join("dialogue/intro.dialogue")).unwrap(),
             "~ start\n=> END\n"
+        );
+
+        // A file picked in the project, as the project names it; one outside, refused.
+        let inside = call(
+            &webview,
+            "project_path",
+            serde_json::json!({ "path": dir.path().join("dialogue/intro.dialogue") }),
+        )
+        .unwrap();
+        assert_eq!(inside, "dialogue/intro.dialogue");
+        let outside = tempfile::NamedTempFile::new().unwrap();
+        let refused = call(
+            &webview,
+            "project_path",
+            serde_json::json!({ "path": outside.path() }),
+        )
+        .unwrap_err();
+        assert!(
+            refused
+                .as_str()
+                .unwrap()
+                .contains("outside the game's folder"),
+            "{refused}"
         );
 
         // Outside git there is no team.

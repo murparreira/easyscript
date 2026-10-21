@@ -5,6 +5,7 @@
   import { useEditor } from "./editor.svelte";
   import Face from "./Face.svelte";
   import { plural, t } from "./i18n.svelte";
+  import { pickImage } from "./pickFile";
   import { useReader } from "./reader.svelte";
   import { list, slug } from "./text";
 
@@ -47,6 +48,18 @@
   }
 
   const total = (c: CharacterView) => c.speakers.reduce((n, s) => n + (lines.get(s) ?? 0), 0);
+
+  // A portrait from the files, with the system's file chooser.
+  let pickError: string | null = $state(null);
+  async function browsePortrait() {
+    pickError = null;
+    try {
+      const picked = await pickImage(t("Choose a portrait"), form?.portrait || portraits[0]);
+      if (picked && form) form.portrait = picked;
+    } catch (e) {
+      pickError = String(e);
+    }
+  }
 </script>
 
 <section class="sec builder" id="b-characters">
@@ -140,7 +153,12 @@
               </button>
             {/each}
           </div>
-          <input bind:value={form.portrait} placeholder="path/to/portrait.png" spellcheck="false" aria-label={t("Portrait path")} />
+          <div class="le-row">
+            <input class="grow" bind:value={form.portrait} placeholder="path/to/portrait.png" spellcheck="false" aria-label={t("Portrait path")} />
+            <button type="button" class="btn small" onclick={browsePortrait}>{t("Browse…")}</button>
+          </div>
+          {#if form.portrait && !reader.imageClasses.has(form.portrait)}<p class="hint">{t("The portrait shows once you apply.")}</p>{/if}
+          {#if pickError}<p class="error">{pickError}</p>{/if}
         </div>
       </div>
       {#if editor.error}<p class="error">{editor.error}</p>{/if}

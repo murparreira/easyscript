@@ -59,6 +59,7 @@
     try {
       editor!.receive(await invoke<Session>("open_project", { path: folder }));
       path = folder;
+      projects.current = folder;
       remember(folder);
     } catch (e) {
       error = `${folder}: ${e}`;

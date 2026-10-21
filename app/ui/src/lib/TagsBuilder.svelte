@@ -6,6 +6,7 @@
   import { useEditor } from "./editor.svelte";
   import { walk } from "./model";
   import { plural, t } from "./i18n.svelte";
+  import { pickImage } from "./pickFile";
   import { useReader } from "./reader.svelte";
   import { list } from "./text";
 
@@ -56,6 +57,21 @@
   }
 
   const ordered = (values: Map<string, number>) => [...values].sort((a, b) => b[1] - a[1]);
+
+  // An asset tag's path from one of its files: `assets/faces/keeper_sad.png` → `assets/faces/{value}.png`.
+  let pickError: string | null = $state(null);
+  async function fromFile() {
+    pickError = null;
+    try {
+      const picked = await pickImage(t("Choose one of its files"), form?.path || null);
+      if (!picked || !form) return;
+      const slash = picked.lastIndexOf("/");
+      const dot = picked.lastIndexOf(".");
+      form.path = `${picked.slice(0, slash + 1)}{value}${dot > slash ? picked.slice(dot) : ""}`;
+    } catch (e) {
+      pickError = String(e);
+    }
+  }
 </script>
 
 <section class="sec builder" id="b-tags">
@@ -137,7 +153,16 @@
           </label>
         </div>
         {#if form.kind === "enum"}<label class="le-field"><span class="k">{t("Values (comma separated)")}</span><input bind:value={form.values} spellcheck="false" /></label>{/if}
-        {#if form.kind === "asset"}<label class="le-field"><span class="k">{t("Where its file is, with {value}")}</span><input bind:value={form.path} placeholder="assets/faces/{'{value}'}.png" spellcheck="false" /></label>{/if}
+        {#if form.kind === "asset"}
+          <div class="le-field">
+            <label class="le-field"><span class="k">{t("Where its file is, with {value}")}</span><input bind:value={form.path} placeholder="assets/faces/{'{value}'}.png" spellcheck="false" /></label>
+            <div class="le-row">
+              <button type="button" class="btn small" onclick={fromFile}>{t("From one of its files…")}</button>
+              <span class="hint">{t("Pick any one of them: the rest are found by name in the same folder.")}</span>
+            </div>
+            {#if pickError}<p class="error">{pickError}</p>{/if}
+          </div>
+        {/if}
         <label class="le-field"><span class="k">{t("Description")}</span><input bind:value={form.description} /></label>
       </div>
       {#if editor.error}<p class="error">{editor.error}</p>{/if}

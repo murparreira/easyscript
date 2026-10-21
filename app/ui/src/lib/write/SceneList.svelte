@@ -3,6 +3,7 @@
   // a new scene. Scenes the team touched are marked: changed on origin and not here yet,
   // being changed on a teammate's branch, changed since the writer last looked.
   import { tick } from "svelte";
+  import type { Label } from "../bindings/Label";
   import { useEditor } from "../editor.svelte";
   import { plural, t } from "../i18n.svelte";
   import { walk } from "../model";
@@ -103,23 +104,27 @@
     editor.target = null;
   }
 
-  // A new scene, after the current one in its file; or a new file.
+  // A new scene: after the current one, or at the end of a place; or a new file.
   let filing = $state(false);
   let naming = $state(false);
   let name = $state("");
   let nameBox: HTMLInputElement | undefined = $state();
+  /** The scene the new one goes after. */
+  let after: Label | undefined = $state();
   const valid = $derived(/^[A-Za-z_][A-Za-z0-9_]*$/.test(name.trim()));
-  async function startNaming() {
+  async function startNaming(anchor = current) {
+    after = anchor;
     naming = true;
+    filing = false;
     name = "";
     await tick();
     nameBox?.focus();
   }
   async function addScene() {
-    if (!current || !valid) return;
+    if (!after || !valid) return;
     const id = name.trim();
-    const path = reader.view.script.files[current.span.file].path;
-    if ((await editor.edit(path, [{ op: "add_label", at: current.span.start, id }])) !== null) {
+    const path = reader.view.script.files[after.span.file].path;
+    if ((await editor.edit(path, [{ op: "add_label", at: after.span.start, id }])) !== null) {
       naming = false;
       reader.scene = id;
     }
@@ -160,12 +165,15 @@
         {#if shown.length > 0}
           {@const expanded = open.has(place.id) || q.length > 1 || touchedOnly}
           {@const flagged = !expanded && place.labels.some((l) => touched.has(keyOf(l.id)))}
-          <button type="button" class="rail-place" aria-expanded={expanded} onclick={() => toggle(place.id)}>
-            <span class="caret" aria-hidden="true">{expanded ? "▾" : "▸"}</span>
-            <span class="name">{place.name}</span>
-            {#if flagged}<span class="pip team" title={t("The team changed scenes here")}></span>{/if}
-            <span class="count">{q.length > 1 ? `${shown.length}/${place.labels.length}` : place.labels.length}</span>
-          </button>
+          <div class="rail-place-row">
+            <button type="button" class="rail-place" aria-expanded={expanded} onclick={() => toggle(place.id)}>
+              <span class="caret" aria-hidden="true">{expanded ? "▾" : "▸"}</span>
+              <span class="name">{place.name}</span>
+              {#if flagged}<span class="pip team" title={t("The team changed scenes here")}></span>{/if}
+              <span class="count">{q.length > 1 ? `${shown.length}/${place.labels.length}` : place.labels.length}</span>
+            </button>
+            <button type="button" class="place-add" title={t("A new scene at the end of {place}", { place: place.name })} aria-label={t("A new scene at the end of {place}", { place: place.name })} onclick={() => startNaming(place.labels[place.labels.length - 1])}>+</button>
+          </div>
           {#if expanded}
             <ul class="rail-scenes">
               {#each shown as label (label.id + label.span.file)}
@@ -197,14 +205,14 @@
           onkeydown={(e) => e.key === "Escape" && (naming = false)} />
         <button class="btn primary" type="submit" disabled={!valid || editor.busy}>{t("Add")}</button>
         <button class="btn" type="button" onclick={() => (naming = false)}>{t("Cancel")}</button>
-        <p class="hint">{name && !valid ? t("Letters, digits and _, not starting with a digit.") : t("Goes after {scene}, in {file}.", { scene: current?.id ?? "", file: current ? reader.view.script.files[current.span.file].path : "" })}</p>
+        <p class="hint">{name && !valid ? t("Letters, digits and _, not starting with a digit.") : t("Goes after {scene}, in {file}.", { scene: after?.id ?? "", file: after ? reader.view.script.files[after.span.file].path : "" })}</p>
       </form>
     {:else if filing}
       <NewFile done={() => (filing = false)} />
     {:else}
       <div class="le-row">
-        <button class="btn" type="button" onclick={startNaming} disabled={!current} title={current ? t("A new scene after {scene}", { scene: current.id }) : undefined}>{t("+ Scene")}</button>
-        <button class="btn" type="button" onclick={() => (filing = true)} title={t("A new dialogue file")}>{t("+ File")}</button>
+        <button class="btn" type="button" onclick={() => startNaming()} disabled={!current} title={current ? t("A new scene after {scene}", { scene: current.id }) : undefined}>{t("+ Scene")}</button>
+        <button class="btn" type="button" onclick={() => (filing = true)} title={t("A new dialogue file: a place, a character, a chapter")}>{t("+ File")}</button>
       </div>
     {/if}
   </div>

@@ -24,7 +24,13 @@ type Prefs = {
   showMarks: boolean;
   theme: Theme;
   playOpen: boolean;
+  railWidth: number;
+  playWidth: number;
 };
+
+/** The Write view's side panels, as they start. */
+export const RAIL_WIDTH = 250;
+export const PLAY_WIDTH = 360;
 
 function loadPrefs(): Partial<Prefs> {
   try {
@@ -43,6 +49,9 @@ export class Reader {
   theme: Theme = $state("system");
   /** The play panel beside the scene being written. */
   playOpen = $state(true);
+  /** The widths of the scene list and the play panel, in pixels. */
+  railWidth = $state(RAIL_WIDTH);
+  playWidth = $state(PLAY_WIDTH);
   /** Editing is possible (the desktop app); the static page reads. */
   writable: boolean;
   tab: Tab = $state("read");
@@ -70,6 +79,9 @@ export class Reader {
   speakers: string[];
   /** For each speaker, the faces their lines use, most used first. */
   facesBySpeaker: Map<string, string[]>;
+  /** Every tag the script uses, with the values it takes, most used first: what a line's
+   *  tags can be, with or without a project file. */
+  tagUses: Map<string, string[]>;
   /** How the script calls a flag in a condition, with `{flag}` for its name. */
   flagCall: string | null;
   /** How the script sets a flag (`do Globals.set_flag("{flag}")`), with `{flag}` for its name. */
@@ -97,6 +109,7 @@ export class Reader {
       ...new Set([...this.view.characters.flatMap((c) => c.speakers), ...this.view.stats.speakers.map((s) => s.name).filter(Boolean)]),
     ]);
     this.facesBySpeaker = $derived(facesBySpeaker(this.view, this.tagSpecs));
+    this.tagUses = $derived(tagUses(this.allLabels()));
     this.flagCall = $derived(flagCall(this.view));
     this.flagSet = $derived(flagSet(this.view));
     const prefs = loadPrefs();
@@ -105,6 +118,8 @@ export class Reader {
     this.showMarks = prefs.showMarks ?? false;
     this.theme = prefs.theme ?? "system";
     this.playOpen = prefs.playOpen ?? true;
+    this.railWidth = prefs.railWidth ?? RAIL_WIDTH;
+    this.playWidth = prefs.playWidth ?? PLAY_WIDTH;
     $effect.root(() => {
       $effect(() => {
         const prefs: Prefs = {
@@ -113,6 +128,8 @@ export class Reader {
           showMarks: this.showMarks,
           theme: this.theme,
           playOpen: this.playOpen,
+          railWidth: this.railWidth,
+          playWidth: this.playWidth,
         };
         try {
           localStorage.setItem(PREFS, JSON.stringify(prefs));
@@ -251,4 +268,22 @@ export function provideReader(reader: Reader) {
 
 export function useReader(): Reader {
   return getContext<Reader>(KEY);
+}
+
+function tagUses(labels: Label[]): Map<string, string[]> {
+  const counts = new Map<string, Map<string, number>>();
+  const add = (tags: Tag[]) => {
+    for (const tag of tags) {
+      const values = counts.get(tag.name) ?? new Map<string, number>();
+      if (tag.value) values.set(tag.value, (values.get(tag.value) ?? 0) + 1);
+      counts.set(tag.name, values);
+    }
+  };
+  for (const label of labels) {
+    for (const node of walk(label.body)) {
+      if (node.type === "line") add(node.tags);
+      else if (node.type === "menu") node.choices.forEach((c) => add(c.tags));
+    }
+  }
+  return new Map([...counts].map(([name, values]) => [name, [...values].sort((a, b) => b[1] - a[1]).map(([v]) => v)]));
 }

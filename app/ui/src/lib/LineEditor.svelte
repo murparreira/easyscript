@@ -12,6 +12,7 @@
   import FacePicker from "./FacePicker.svelte";
   import { t } from "./i18n.svelte";
   import { useReader } from "./reader.svelte";
+  import LineTags from "./LineTags.svelte";
   import JumpPicker from "./write/JumpPicker.svelte";
 
   let {
@@ -55,8 +56,7 @@
   const face = $derived(specs.find((s) => s.show === "face" && s.kind === "asset"));
   const voice = $derived(specs.find((s) => s.show === "voice" && s.kind === "enum"));
   const switches = $derived(specs.filter((s) => s.kind === "flag"));
-  const shownByControls = $derived(new Set([face?.name, voice?.name, ...switches.map((s) => s.name)].filter(Boolean)));
-  const otherTags = $derived(Object.keys(tags).filter((name) => !shownByControls.has(name)));
+  const shownByControls: Set<string> = $derived(new Set([face?.name, voice?.name, ...switches.map((s) => s.name)].filter((n): n is string => !!n)));
 
   let faceValue = $state(untrack(() => (draft ? draft.face : face && face.name in before ? before[face.name] : null)));
   $effect(() => {
@@ -187,7 +187,8 @@
       <label class="field"><span class="k">{target.choice ? t("What the player picks") : t("Words")}</span>
         <textarea bind:this={wordsBox} bind:value={words} rows={Math.min(10, Math.max(3, Math.ceil(words.length / 46) + 1))} spellcheck="true"></textarea>
       </label>
-      <div class="le-row">
+      <div class="le-row le-tags">
+        <span class="k">{t("Tags")}</span>
         {#each switches as s (s.name)}
           <label class="tog" title={s.description ?? ""}>
             <input type="checkbox" checked={has(s.name)} onchange={(e) => toggle(s.name, e.currentTarget.checked)} />
@@ -199,10 +200,7 @@
             {t("Face")}: {faceValue ?? t("none")} {picking ? "▴" : "▾"}
           </button>
         {/if}
-        {#each otherTags as name (name)}
-          <span class="chip">{name}{tags[name] ? `=${tags[name]}` : ""}
-            <button type="button" class="link" aria-label={t("Remove {name}", { name })} onclick={() => delete tags[name]}>✕</button></span>
-        {/each}
+        <LineTags bind:tags shown={shownByControls} />
       </div>
       {#if target.choice}<ConditionInput bind:value={condition} label={t("Shown if")} />{/if}
       {#if initial.jump !== null || isNew}<JumpPicker bind:value={goTo} />{/if}
