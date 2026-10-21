@@ -32,7 +32,9 @@ jobs:
             app="$(ls ~/Applications/easyscript.app/Contents/MacOS/* | head -n 1)"
             "$app" crates/core/tests/fixtures/lighthouse & pid=$!
           else
-            sudo apt-get update && sudo apt-get install -y xvfb
+            # A desktop has a display and the graphics libraries (EGL, Mesa); a server has
+            # neither, and the AppImage leaves the graphics drivers to the system.
+            sudo apt-get update && sudo apt-get install -y xvfb libegl1 libgl1-mesa-dri
             xvfb-run -a ~/.local/bin/easyscript-app crates/core/tests/fixtures/lighthouse & pid=$!
           fi
           sleep 20

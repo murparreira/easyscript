@@ -104,6 +104,10 @@ Terminal=false
 Categories=Development;
 EOF
   command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$prefix/share/applications" >/dev/null 2>&1 || true
+  if command -v ldconfig >/dev/null 2>&1 && ! ldconfig -p 2>/dev/null | grep -q 'libEGL\.so\.1'; then
+    echo "This system has no OpenGL/EGL library, which the app needs to draw its window: install Mesa"
+    echo "(libegl1 on Debian and Ubuntu, mesa on Fedora and Arch), as any desktop has."
+  fi
   bin="$prefix/bin"
   tar -xzf "$tmp/cli.tar.gz" -C "$tmp"
   cp "$tmp"/easyscript-cli-*/easyscript "$bin/easyscript"
