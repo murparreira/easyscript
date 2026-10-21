@@ -36,6 +36,8 @@ When `origin` is on GitHub, **Sign in to GitHub** shows a code; GitHub, in your 
 
 **Export…** writes the script, unsaved edits included, as JSON for other tools (a documented format), as Dialogue Manager's translation table (exporting over a table keeps its translations), as voice scripts and recording sheets by character and mood, or as a Fountain screenplay. **Import…** turns a Twine (`.twee`), Yarn Spinner (`.yarn`) or Ink (`.ink`) script into a new `.dialogue` file in the project, after showing it and what did not convert. See [the formats](docs/formats/README.md).
 
+The app speaks English and Portuguese (Brazil): it follows the system's language, and the menu at the top right changes it. Messages from the checks and the files the exports write are in English for now.
+
 The command line:
 
 ```sh
@@ -64,6 +66,8 @@ cargo test --workspace   # Rust tests; also writes the frontend's model types
 npm run build:page       # the single-file page `dialogue-maker build` embeds
 cargo run -p dm-cli      # the CLI (build the page first for `build`)
 ```
+
+The app's own words go through `t("English text")` (`app/ui/src/lib/i18n.svelte.ts`); translations live in `app/ui/src/lib/locales/`, and `npm test` fails when a message has none or a translation is left over.
 
 The frontend's types in `app/ui/src/lib/bindings/` are generated from the Rust model by `cargo test` (ts-rs); commit them with the model change. To work on the read view in a browser, write a view with `dialogue-maker build path/to/game --json -o app/ui/dev/view.json` and open the Vite dev server (`npm run dev -w app/ui`).
 

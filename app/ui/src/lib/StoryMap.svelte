@@ -6,6 +6,7 @@
   import type { FlowKind } from "./bindings/FlowKind";
   import type { Label } from "./bindings/Label";
   import { walk } from "./model";
+  import { plural, t } from "./i18n.svelte";
   import { useReader } from "./reader.svelte";
 
   const reader = useReader();
@@ -37,13 +38,13 @@
   const reached = $derived(new Set([...reader.view.flow.entries, ...reader.view.flow.edges.map((e) => e.to)]));
 
   // Which kinds of edges to draw.
-  const KINDS: Array<{ kind: FlowKind; name: string }> = [
-    { kind: "jump", name: "jumps" },
-    { kind: "choice", name: "choices" },
-    { kind: "conditional", name: "conditions" },
-    { kind: "return", name: "there and back" },
-    { kind: "fall_through", name: "falling through" },
-    { kind: "flag", name: "flags" },
+  const KINDS: Array<{ kind: FlowKind; name: () => string }> = [
+    { kind: "jump", name: () => t("jumps") },
+    { kind: "choice", name: () => t("choices") },
+    { kind: "conditional", name: () => t("conditions") },
+    { kind: "return", name: () => t("there and back") },
+    { kind: "fall_through", name: () => t("falling through") },
+    { kind: "flag", name: () => t("flags") },
   ];
   let shown: Record<string, boolean> = $state(Object.fromEntries(KINDS.map((k) => [k.kind, true])));
   const edges = $derived(reader.view.flow.edges.filter((e) => shown[e.kind] && positions.has(e.from) && positions.has(e.to)));
@@ -159,24 +160,24 @@
 
 <div class="map-page gut">
   <div class="map-bar">
-    <div class="seg" role="group" aria-label="Map">
-      <button type="button" aria-pressed={view === "flow"} onclick={() => (view = "flow")}>Flow</button>
-      <button type="button" aria-pressed={view === "people"} onclick={() => (view = "people")}>Characters × places</button>
-      <button type="button" aria-pressed={view === "flags"} onclick={() => (view = "flags")}>Flags × places</button>
+    <div class="seg" role="group" aria-label={t("Map")}>
+      <button type="button" aria-pressed={view === "flow"} onclick={() => (view = "flow")}>{t("Flow")}</button>
+      <button type="button" aria-pressed={view === "people"} onclick={() => (view = "people")}>{t("Characters × places")}</button>
+      <button type="button" aria-pressed={view === "flags"} onclick={() => (view = "flags")}>{t("Flags × places")}</button>
     </div>
     {#if view === "flow"}
-      <label class="tog">Highlight
-        <select bind:value={character} aria-label="Highlight a character's labels">
-          <option value="">no character</option>
+      <label class="tog">{t("Highlight")}
+        <select bind:value={character} aria-label={t("Highlight a character's labels")}>
+          <option value="">{t("no character")}</option>
           {#each reader.view.characters as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
         </select>
-        <select bind:value={flag} aria-label="Highlight a flag's labels">
-          <option value="">no flag</option>
+        <select bind:value={flag} aria-label={t("Highlight a flag's labels")}>
+          <option value="">{t("no flag")}</option>
           {#each reader.view.flags as f (f.flag)}<option value={f.flag}>{f.flag}</option>{/each}
         </select>
       </label>
       <span class="kinds">
-        {#each KINDS as k (k.kind)}<label class="tog"><input type="checkbox" bind:checked={shown[k.kind]} /> <span class="edge-key {k.kind}"></span>{k.name}</label>{/each}
+        {#each KINDS as k (k.kind)}<label class="tog"><input type="checkbox" bind:checked={shown[k.kind]} /> <span class="edge-key {k.kind}"></span>{k.name()}</label>{/each}
       </span>
     {/if}
   </div>
@@ -184,7 +185,7 @@
   {#if view === "flow"}
     <div class="map-layout" class:with-doc={!!doc}>
       <div class="map-scroll" bind:this={scroller}>
-        <svg {width} {height} role="img" aria-label="Labels by place, and the links between them">
+        <svg {width} {height} role="img" aria-label={t("Labels by place, and the links between them")}>
           <defs>
             <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
               <path d="M 0 0 L 10 5 L 0 10 z" class="arrow-head" />
@@ -205,7 +206,7 @@
               class="edge {e.kind}"
               class:dim={linked && !(linked.has(e.from) && linked.has(e.to))}
               marker-end="url(#arrow)"
-            ><title>{from.label.id} → {to.label.id}{e.flag ? ` (flag ${e.flag})` : ""}</title></path>
+            ><title>{from.label.id} → {to.label.id}{e.flag ? ` (${t("flag {flag}", { flag: e.flag })})` : ""}</title></path>
           {/each}
           {#each [...positions] as [key, p] (key)}
             {@const mark = flagged?.get(key)}
@@ -227,8 +228,8 @@
             >
               <rect width={COL} height={NODE_H} rx="5" />
               <text x="8" y="14">{short(p.label.id)}</text>
-              <text x={COL - 6} y="14" class="count">{mark === "set" ? "sets" : mark === "read" ? "reads" : mark === "both" ? "sets+reads" : lineCount(p.label)}</text>
-              <title>{p.label.id}: {lineCount(p.label)} lines{entries.has(key) ? ", started by the game" : reached.has(key) ? "" : ", nothing leads here"}</title>
+              <text x={COL - 6} y="14" class="count">{mark === "set" ? t("sets") : mark === "read" ? t("reads") : mark === "both" ? t("sets+reads") : lineCount(p.label)}</text>
+              <title>{p.label.id}: {plural(lineCount(p.label), "{n} line", "{n} lines")}{entries.has(key) ? `, ${t("started by the game")}` : reached.has(key) ? "" : `, ${t("nothing leads here")}`}</title>
             </g>
           {/each}
         </svg>
@@ -241,11 +242,11 @@
         </aside>
       {/if}
     </div>
-    <p class="lede map-legend">A dark outline: the game starts the label by name; dashed: nothing leads to it. The number is its lines. {reader.view.flow.edges.length} links between {positions.size} labels; hover a label for its links, click it to read it.</p>
+    <p class="lede map-legend">{t("A dark outline: the game starts the label by name; dashed: nothing leads to it. The number is its lines.")} {t("{links} links between {labels} labels; hover a label for its links, click it to read it.", { links: reader.view.flow.edges.length, labels: positions.size })}</p>
   {:else if view === "people"}
     <div class="tablewrap grid-wrap">
       <table class="grid">
-        <thead><tr><th></th>{#each columns as c (c.id)}<th title={c.name}><span>{c.name}</span></th>{/each}<th>All</th></tr></thead>
+        <thead><tr><th></th>{#each columns as c (c.id)}<th title={c.name}><span>{c.name}</span></th>{/each}<th>{t("All")}</th></tr></thead>
         <tbody>
           {#each people as row (row.c.id)}
             <tr>
@@ -257,7 +258,7 @@
         </tbody>
       </table>
     </div>
-    <p class="lede map-legend">Lines each character speaks in each place.</p>
+    <p class="lede map-legend">{t("Lines each character speaks in each place.")}</p>
   {:else}
     <div class="tablewrap grid-wrap">
       <table class="grid">
@@ -272,6 +273,6 @@
         </tbody>
       </table>
     </div>
-    <p class="lede map-legend">● set by a label in that place · ○ read by one. Flags set or read only by the game's code are not here.</p>
+    <p class="lede map-legend">{t("● set by a label in that place · ○ read by one. Flags set or read only by the game's code are not here.")}</p>
   {/if}
 </div>

@@ -1,6 +1,7 @@
 <script lang="ts">
   // What each flag means, beside the labels that set and read it.
   import { useEditor } from "./editor.svelte";
+  import { plural, t } from "./i18n.svelte";
   import { useReader } from "./reader.svelte";
 
   const reader = useReader();
@@ -14,11 +15,11 @@
 </script>
 
 <section class="sec builder" id="b-flags">
-  <h2>Flags</h2>
-  <p class="lede">What each flag means. Changes go to the project file when you leave the field.</p>
+  <h2>{t("Flags")}</h2>
+  <p class="lede">{t("What each flag means. Changes go to the project file when you leave the field.")}</p>
   <div class="tablewrap">
     <table class="flags">
-      <thead><tr><th>Flag</th><th>Means</th><th>Set by</th><th>Read by</th></tr></thead>
+      <thead><tr><th>{t("Flag")}</th><th>{t("Means")}</th><th>{t("Set by")}</th><th>{t("Read by")}</th></tr></thead>
       <tbody>
         {#each reader.view.flags as flag (flag.flag)}
           <tr>
@@ -27,8 +28,8 @@
               <input
                 class="meaning"
                 value={flag.meaning ?? ""}
-                placeholder="what it means"
-                aria-label="What {flag.flag} means"
+                placeholder={t("what it means")}
+                aria-label={t("What {flag} means", { flag: flag.flag })}
                 onchange={(e) => save(flag.flag, flag.meaning, e.currentTarget)}
               />
             </td>

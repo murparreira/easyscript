@@ -1,5 +1,6 @@
 <script lang="ts">
   // Pick a face from the files a face tag can name; the speaker's usual faces first.
+  import { t } from "./i18n.svelte";
   import { useReader } from "./reader.svelte";
 
   let {
@@ -24,12 +25,12 @@
 
 <div class="face-picker">
   <div class="face-picker-head">
-    <span class="k">Face</span>
-    <span class="tid">{value ?? "none"}</span>
-    <input type="search" placeholder="Filter faces…" bind:value={filter} aria-label="Filter faces" />
-    <button type="button" class="link" onclick={() => (value = null)}>none</button>
+    <span class="k">{t("Face")}</span>
+    <span class="tid">{value ?? t("none")}</span>
+    <input type="search" placeholder={t("Filter faces…")} bind:value={filter} aria-label={t("Filter faces")} />
+    <button type="button" class="link" onclick={() => (value = null)}>{t("none")}</button>
   </div>
-  <div class="face-grid" role="listbox" aria-label="Faces">
+  <div class="face-grid" role="listbox" aria-label={t("Faces")}>
     {#each faces as face (face)}
       <button
         type="button"
@@ -43,6 +44,6 @@
         <span class="av face {image(face) ?? ''}"></span>
       </button>
     {/each}
-    {#if faces.length === 0}<p class="nothing">No faces match.</p>{/if}
+    {#if faces.length === 0}<p class="nothing">{t("No faces match.")}</p>{/if}
   </div>
 </div>

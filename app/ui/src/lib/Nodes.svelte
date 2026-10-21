@@ -14,6 +14,7 @@
   import { useEditor } from "./editor.svelte";
   import LineEditor from "./LineEditor.svelte";
   import LineTools from "./LineTools.svelte";
+  import { t } from "./i18n.svelte";
   import { useReader } from "./reader.svelte";
   import TagChips from "./TagChips.svelte";
   import TextView from "./TextView.svelte";
@@ -38,11 +39,11 @@
     {#if conditionAt === at}
       <form class="cond-edit" onsubmit={(e) => { e.preventDefault(); saveCondition(file, at); }}>
         <ConditionInput bind:value={conditionText} />
-        <button class="btn primary" type="submit" disabled={editor.busy}>Apply</button>
-        <button class="btn" type="button" onclick={() => (conditionAt = null)}>Cancel</button>
+        <button class="btn primary" type="submit" disabled={editor.busy}>{t("Apply")}</button>
+        <button class="btn" type="button" onclick={() => (conditionAt = null)}>{t("Cancel")}</button>
       </form>
     {:else}
-      <button type="button" class="link" title="Edit the condition" onclick={() => { conditionAt = at; conditionText = condition ?? ""; }}>✎</button>
+      <button type="button" class="link" title={t("Edit the condition")} onclick={() => { conditionAt = at; conditionText = condition ?? ""; }}>✎</button>
     {/if}
   {/if}
 {/snippet}
@@ -53,7 +54,7 @@
     <LineView line={node} marks={node.marks} span={node.span} />
   {:else if node.type === "menu"}
     <div class="menu" class:thought={node.choices.every((c) => reader.shown(c.tags, "thought").length > 0)}>
-      <div class="menu-h">Choices</div>
+      <div class="menu-h">{t("Choices")}</div>
       <ol>
         {#each node.choices as choice, j (j)}
           {@const side = conditionSide(choice.condition, reader.view.variants)}
@@ -72,7 +73,7 @@
                     </div>
                     <div class="opt-meta">
                       {#if side}<span class="chip variant" class:yes={side.side}>{side.side ? side.variant.if_true : side.variant.if_false}</span>
-                      {:else if choice.condition}<span class="when">shown if</span> <Expr expr={choice.condition} />{/if}
+                      {:else if choice.condition}<span class="when">{t("shown if")}</span> <Expr expr={choice.condition} />{/if}
                       <TagChips tags={choice.tags} />
                       <Marks marks={choice.marks} />
                       {#if choice.jump}<JumpView jump={choice.jump} inline />{/if}
@@ -100,14 +101,14 @@
                 {@const side = sides[j]!}
                 <span class="chip variant" class:yes={side.side}>{side.side ? side.variant.if_true : side.variant.if_false}</span>
               {:else}
-                <span class="kw">{arm.keyword === "elif" ? "else if" : arm.keyword}</span>
+                <span class="kw">{arm.keyword === "elif" ? t("else if") : arm.keyword === "else" ? t("else") : t("if")}</span>
                 {#if arm.condition}<Expr expr={arm.condition} />{/if}
               {/if}
               {#if arm.keyword !== "else"}{@render conditionEditor(arm.span.file, arm.span.start, arm.condition)}{/if}
               <Marks marks={arm.marks} />
             </div>
             <div class="branch">
-              {#if arm.body.length > 0}<Nodes nodes={arm.body} />{:else}<p class="nothing">nothing</p>{/if}
+              {#if arm.body.length > 0}<Nodes nodes={arm.body} />{:else}<p class="nothing">{t("nothing")}</p>{/if}
             </div>
           </div>
         {/if}
@@ -116,12 +117,12 @@
   {:else if node.type === "match"}
     {@const flags = reader.view.flag_functions.match_subjects.includes(node.subject)}
     <div class="cond">
-      <div class="match-h">Depends on <Expr expr={node.subject} /></div>
+      <div class="match-h">{t("Depends on")} <Expr expr={node.subject} /></div>
       {#each node.arms as arm, j (j)}
         <div class="arm">
           <Notes notes={arm.notes} />
           <div class="br-h">
-            <span class="kw">{arm.keyword === "when" ? "when" : "otherwise"}</span>
+            <span class="kw">{arm.keyword === "when" ? t("when") : t("otherwise")}</span>
             {#if arm.condition && flags}<FlagChip flag={arm.condition.replace(/^&?["']|["']$/g, "")} />
             {:else if arm.condition}<Expr expr={arm.condition} />{/if}
             {#if arm.keyword === "when"}{@render conditionEditor(arm.span.file, arm.span.start, arm.condition)}{/if}
@@ -132,18 +133,18 @@
     </div>
   {:else if node.type === "while"}
     <div class="cond">
-      <div class="br-h"><span class="kw">while</span> <Expr expr={node.condition} /></div>
+      <div class="br-h"><span class="kw">{t("while")}</span> <Expr expr={node.condition} /></div>
       <div class="branch"><Nodes nodes={node.body} /></div>
     </div>
   {:else if node.type === "random"}
     <div class="cond">
-      <div class="match-h">One of these, at random</div>
+      <div class="match-h">{t("One of these, at random")}</div>
       {#each node.options as option, j (j)}
         <div class="arm">
           {#if option.weight || option.condition}
             <div class="br-h">
-              {#if option.weight}<span class="kw">weight {option.weight}</span>{/if}
-              {#if option.condition}<span class="when">if</span> <Expr expr={option.condition} />{/if}
+              {#if option.weight}<span class="kw">{t("weight {weight}", { weight: option.weight })}</span>{/if}
+              {#if option.condition}<span class="when">{t("if")}</span> <Expr expr={option.condition} />{/if}
             </div>
           {/if}
           <div class="branch"><Nodes nodes={option.body} /></div>

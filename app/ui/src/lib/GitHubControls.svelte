@@ -7,6 +7,7 @@
   import type { PullRequest } from "./bindings/PullRequest";
   import type { Repo } from "./bindings/Repo";
   import type { SignIn } from "./bindings/SignIn";
+  import { t } from "./i18n.svelte";
 
   let { head }: { head: string | null } = $props();
 
@@ -71,7 +72,7 @@
   let result: PullRequest | null = $state(null);
   function openDialog() {
     title = head?.replace(/^[0-9a-f]{7} /, "") ?? "";
-    body = "Script changes made with dialogue-maker.";
+    body = t("Script changes made with dialogue-maker.");
     result = null;
     error = null;
     asking = true;
@@ -94,11 +95,11 @@
     <span class="k">GitHub</span>
     <span class="tid">{repo.owner}/{repo.name}</span>
     {#if account}
-      <button class="btn" type="button" onclick={openDialog}>Pull request…</button>
-      <span class="tid">as {account.login}</span>
-      <button type="button" class="link" onclick={signOut}>sign out</button>
+      <button class="btn" type="button" onclick={openDialog}>{t("Pull request…")}</button>
+      <span class="tid">{t("as {login}", { login: account.login })}</span>
+      <button type="button" class="link" onclick={signOut}>{t("sign out")}</button>
     {:else}
-      <button class="btn" type="button" onclick={startSignIn}>Sign in to GitHub</button>
+      <button class="btn" type="button" onclick={startSignIn}>{t("Sign in to GitHub")}</button>
     {/if}
     {#if error && !asking && !signIn}<span class="error">{error}</span>{/if}
   </span>
@@ -106,17 +107,16 @@
 
 {#if signIn}
   <div class="overlay" role="presentation">
-    <div class="diff-panel sign-in" role="dialog" aria-label="Sign in to GitHub" aria-modal="true">
-      <h2>Sign in to GitHub</h2>
-      <p>GitHub asks you to authorize dialogue-maker. Give it this code there:</p>
+    <div class="diff-panel sign-in" role="dialog" aria-label={t("Sign in to GitHub")} aria-modal="true">
+      <h2>{t("Sign in to GitHub")}</h2>
+      <p>{t("GitHub asks you to authorize dialogue-maker. Give it this code there:")}</p>
       <p class="user-code">{signIn.user_code}</p>
       <div class="le-actions">
-        <button class="btn primary" type="button" onclick={openGitHub}>Copy the code and open GitHub</button>
-        <button class="btn" type="button" onclick={cancelSignIn}>Cancel</button>
+        <button class="btn primary" type="button" onclick={openGitHub}>{t("Copy the code and open GitHub")}</button>
+        <button class="btn" type="button" onclick={cancelSignIn}>{t("Cancel")}</button>
       </div>
       <p class="tid">
-        {copied ? "Copied. " : ""}Waiting for you to authorize on {signIn.verification_uri} … dialogue-maker asks to push to your repositories and open pull
-        requests. You can revoke it any time in GitHub's settings, under Applications.
+        {copied ? `${t("Copied.")} ` : ""}{t("Waiting for you to authorize on {site}… dialogue-maker asks to push to your repositories and open pull requests. You can revoke it any time in GitHub's settings, under Applications.", { site: signIn.verification_uri })}
       </p>
       {#if error}<p class="error">{error}</p>{/if}
     </div>
@@ -125,23 +125,23 @@
 
 {#if asking}
   <div class="overlay" role="presentation" onclick={(e) => e.target === e.currentTarget && !busy && (asking = false)}>
-    <div class="diff-panel" role="dialog" aria-label="Pull request" aria-modal="true">
-      <h2>Pull request</h2>
+    <div class="diff-panel" role="dialog" aria-label={t("Pull request")} aria-modal="true">
+      <h2>{t("Pull request")}</h2>
       {#if result}
-        <p>Pull request #{result.number} {result.created ? "opened" : "was already open; your commits are on it now"}.</p>
+        <p>{result.created ? t("Pull request #{n} opened.", { n: result.number }) : t("Pull request #{n} was already open; your commits are on it now.", { n: result.number })}</p>
         <div class="le-actions">
-          <button class="btn primary" type="button" onclick={() => result && openUrl(result.url)}>Open it on GitHub</button>
-          <button class="btn" type="button" onclick={() => (asking = false)}>Close</button>
+          <button class="btn primary" type="button" onclick={() => result && openUrl(result.url)}>{t("Open it on GitHub")}</button>
+          <button class="btn" type="button" onclick={() => (asking = false)}>{t("Close")}</button>
         </div>
       {:else}
-        <p class="lede">Pushes this branch's commits to GitHub and opens a pull request for the team to review. Nothing is forced: if GitHub has commits you do not, you are told.</p>
+        <p class="lede">{t("Pushes this branch's commits to GitHub and opens a pull request for the team to review. Nothing is forced: if GitHub has commits you do not, you are told.")}</p>
         <form class="commit-form" onsubmit={(e) => { e.preventDefault(); pullRequest(); }}>
-          <label class="le-field"><span class="k">Title</span><input bind:value={title} /></label>
-          <label class="le-field"><span class="k">Description</span><textarea bind:value={body} rows="4"></textarea></label>
+          <label class="le-field"><span class="k">{t("Title")}</span><input bind:value={title} /></label>
+          <label class="le-field"><span class="k">{t("Description")}</span><textarea bind:value={body} rows="4"></textarea></label>
           {#if error}<p class="error">{error}</p>{/if}
           <div class="le-actions">
-            <button class="btn primary" type="submit" disabled={busy}>{busy ? "Pushing…" : "Push and open pull request"}</button>
-            <button class="btn" type="button" disabled={busy} onclick={() => (asking = false)}>Cancel</button>
+            <button class="btn primary" type="submit" disabled={busy}>{busy ? t("Pushing…") : t("Push and open pull request")}</button>
+            <button class="btn" type="button" disabled={busy} onclick={() => (asking = false)}>{t("Cancel")}</button>
           </div>
         </form>
       {/if}

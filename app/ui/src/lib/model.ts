@@ -10,6 +10,7 @@ import type { Note } from "./bindings/Note";
 import type { ReadView } from "./bindings/ReadView";
 import type { Segment } from "./bindings/Segment";
 import type { VariantView } from "./bindings/VariantView";
+import { t } from "./i18n.svelte";
 import { normalize } from "./text";
 
 export type SectionOut = { key: string; title: string | null; notes: Note[]; labels: Label[] };
@@ -61,7 +62,7 @@ export function organize(view: ReadView): GroupOut[] {
     group.places.push(place);
   }
   if (loose.length > 0) {
-    groups.push({ name: places.length > 0 ? "Not in a place" : null, places: loose });
+    groups.push({ name: places.length > 0 ? t("Not in a place") : null, places: loose });
   }
   return groups;
 }

@@ -1879,3 +1879,27 @@ table.grid {
   tab-size: 4;
   font-variant-ligatures: none;
 }
+
+/* Read by screen readers, not shown. */
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.masthead .lang {
+  float: right;
+  margin-left: 12px;
+}
+
+.masthead .lang select {
+  font: 0.85rem var(--ui);
+  padding: 3px 6px;
+  border: 1.5px solid var(--rule);
+  border-radius: 6px;
+  background: var(--sheet);
+  color: var(--ink);
+}

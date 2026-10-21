@@ -13,6 +13,7 @@
   import { Reader, provideReader, type VariantChoice } from "./reader.svelte";
   import StatsSection from "./StatsSection.svelte";
   import Toc from "./Toc.svelte";
+  import { LANGUAGES, locale, plural, t } from "./i18n.svelte";
 
   let { view, actions, editor }: { view: ReadView; actions?: Snippet; editor?: Editor } = $props();
   // The editor exists in the desktop app only; the static page reads.
@@ -78,12 +79,13 @@
 
 <header class="masthead gut">
   <div class="in">
-    <div class="eyebrow">The whole script</div>
+    <div class="eyebrow">{t("The whole script")}</div>
+    <label class="lang"><span class="sr">{t("Language")}</span><select value={locale.language} onchange={(e) => locale.set(e.currentTarget.value as typeof locale.language)}>{#each LANGUAGES as l (l.id)}<option value={l.id}>{l.name}</option>{/each}</select></label>
     <h1>{reader.view.title}</h1>
     <div class="meta-line">
-      {reader.view.stats.labels} labels · {reader.view.stats.lines} lines · {reader.view.stats.choices} choices · {speakers} speakers
+      {plural(reader.view.stats.labels, "{n} label", "{n} labels")} · {plural(reader.view.stats.lines, "{n} line", "{n} lines")} · {plural(reader.view.stats.choices, "{n} choice", "{n} choices")} · {plural(speakers, "{n} speaker", "{n} speakers")}
       {#if reader.view.problems.length > 0}
-        · <a href="#problems" class:errors={errors > 0}>{reader.view.problems.length} problems</a>
+        · <a href="#problems" class:errors={errors > 0}>{plural(reader.view.problems.length, "{n} problem", "{n} problems")}</a>
       {/if}
     </div>
     {#if actions}<div class="actions">{@render actions()}</div>{/if}
@@ -93,26 +95,26 @@
 <div class="bar gut">
   <div class="in">
     <label class="search">
-      <input type="search" placeholder="Search lines, speakers, labels, flags…" autocomplete="off" aria-label="Search the script" bind:value={typed} oninput={search} />
+      <input type="search" placeholder={t("Search lines, speakers, labels, flags…")} autocomplete="off" aria-label={t("Search the script")} bind:value={typed} oninput={search} />
     </label>
     {#each reader.view.variants as variant (variant.name)}
       {@const choice = reader.variants[variant.name] ?? "all"}
       <div class="seg" role="group" aria-label={variant.name}>
-        <button type="button" aria-pressed={choice === "all"} onclick={() => choose(variant.name, "all")}>All</button>
+        <button type="button" aria-pressed={choice === "all"} onclick={() => choose(variant.name, "all")}>{t("All")}</button>
         <button type="button" aria-pressed={choice === "true"} onclick={() => choose(variant.name, "true")}>{variant.if_true}</button>
         <button type="button" aria-pressed={choice === "false"} onclick={() => choose(variant.name, "false")}>{variant.if_false}</button>
       </div>
     {/each}
-    <div class="seg" role="group" aria-label="Look at">
-      <button type="button" aria-pressed={reader.tab === "script"} onclick={() => (reader.tab = "script")}>Script</button>
-      <button type="button" aria-pressed={reader.tab === "map"} onclick={() => (reader.tab = "map")}>Story map</button>
-      {#if editor}<button type="button" aria-pressed={reader.tab === "project"} onclick={() => (reader.tab = "project")}>Project</button>{/if}
+    <div class="seg" role="group" aria-label={t("Look at")}>
+      <button type="button" aria-pressed={reader.tab === "script"} onclick={() => (reader.tab = "script")}>{t("Script")}</button>
+      <button type="button" aria-pressed={reader.tab === "map"} onclick={() => (reader.tab = "map")}>{t("Story map")}</button>
+      {#if editor}<button type="button" aria-pressed={reader.tab === "project"} onclick={() => (reader.tab = "project")}>{t("Project")}</button>{/if}
     </div>
-    {#if editor && reader.tab === "script"}<label class="tog edit-toggle"><input type="checkbox" bind:checked={editor.on} /> Edit</label>{/if}
-    <label class="tog"><input type="checkbox" bind:checked={reader.showIds} /> Ids and file names</label>
-    <label class="tog"><input type="checkbox" bind:checked={reader.showMarks} /> Highlight marked lines</label>
+    {#if editor && reader.tab === "script"}<label class="tog edit-toggle"><input type="checkbox" bind:checked={editor.on} /> {t("Edit")}</label>{/if}
+    <label class="tog"><input type="checkbox" bind:checked={reader.showIds} /> {t("Ids and file names")}</label>
+    <label class="tog"><input type="checkbox" bind:checked={reader.showMarks} /> {t("Highlight marked lines")}</label>
     {#if reader.searching}
-      <div class="status">{shown} {shown === 1 ? "label matches" : "labels match"}. Clear the search to see everything.</div>
+      <div class="status">{plural(shown, "{n} label matches.", "{n} labels match.")} {t("Clear the search to see everything.")}</div>
     {/if}
   </div>
 </div>

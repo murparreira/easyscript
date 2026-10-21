@@ -10,6 +10,7 @@
   import { Editor } from "./lib/editor.svelte";
   import FormatsBar from "./lib/FormatsBar.svelte";
   import GitBar from "./lib/GitBar.svelte";
+  import { t } from "./lib/i18n.svelte";
   import Reader from "./lib/Reader.svelte";
 
   const LAST = "dialogue-maker:last-project";
@@ -52,7 +53,7 @@
   }
 
   async function choose() {
-    const folder = await open({ directory: true, title: "Open a game project" });
+    const folder = await open({ directory: true, title: t("Open a game project") });
     if (typeof folder === "string") await openProject(folder);
   }
 
@@ -99,8 +100,8 @@
   <Reader {view} {editor}>
     {#snippet actions()}
       {#if desktop}
-        <button class="btn" type="button" onclick={choose}>Open another project…</button>
-        {#if path}<span class="pmeta">{path} · follows changes on disk</span>{/if}
+        <button class="btn" type="button" onclick={choose}>{t("Open another project…")}</button>
+        {#if path}<span class="pmeta">{path} · {t("follows changes on disk")}</span>{/if}
         {#if view}<FormatsBar {view} />{/if}
         <GitBar />
         {#if error}<span class="error">{error}</span>{/if}
@@ -111,11 +112,11 @@
   <main class="welcome gut">
     <h1>dialogue-maker</h1>
     {#if desktop}
-      <p>Open a game project's folder to read its script. Nothing is changed on disk.</p>
-      <button class="btn primary" type="button" onclick={choose} disabled={loading}>{loading ? "Opening…" : "Open a project…"}</button>
+      <p>{t("Open a game project's folder: the app finds its dialogue files and shows the script. Nothing on disk changes until you save.")}</p>
+      <button class="btn primary" type="button" onclick={choose} disabled={loading}>{loading ? t("Opening…") : t("Open a project…")}</button>
       {#if error}<p class="error">{error}</p>{/if}
     {:else}
-      <p>No script in this page.</p>
+      <p>{t("No script in this page.")}</p>
     {/if}
   </main>
 {/if}

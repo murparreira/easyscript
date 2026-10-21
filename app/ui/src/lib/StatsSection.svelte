@@ -1,5 +1,6 @@
 <script lang="ts">
   // Who talks, and how much.
+  import { t } from "./i18n.svelte";
   import { useReader } from "./reader.svelte";
 
   const reader = useReader();
@@ -9,15 +10,16 @@
 </script>
 
 <section class="sec" id="stats">
-  <h2>Who talks</h2>
+  <h2>{t("Who talks")}</h2>
   <p class="lede">
-    Lines per speaker, choices left out. {stats.lines} lines, {stats.choices} choices in {stats.menus} menus, {stats.words} words.
-    {#if marked > 0}{marked} marks: {stats.marks.map((m) => `${m.count} ${m.name}`).join(", ")}.{/if}
+    {t("Lines per speaker, choices left out.")}
+    {t("{lines} lines, {choices} choices in {menus} menus, {words} words.", { lines: stats.lines, choices: stats.choices, menus: stats.menus, words: stats.words })}
+    {#if marked > 0}{t("{n} marks: {list}.", { n: marked, list: stats.marks.map((m) => `${m.count} ${m.name}`).join(", ") })}{/if}
   </p>
   <ul class="bars">
     {#each stats.speakers as row (row.name)}
       <li>
-        <span class="sn">{row.name || "narration"}</span>
+        <span class="sn">{row.name || t("narration")}</span>
         <span class="track"><i style:width="{(100 * row.count) / most}%"></i></span>
         <span class="sv">{row.count}</span>
       </li>

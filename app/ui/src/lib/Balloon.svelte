@@ -2,6 +2,7 @@
   // A line as a balloon: spoken, or thought; shaking when it shakes. A preview, not the
   // game's own balloon.
   import Face from "./Face.svelte";
+  import { t } from "./i18n.svelte";
 
   let {
     face,
@@ -24,5 +25,5 @@
       <div class="balloon-text">{shown || "…"}</div>
     </div>
   {/key}
-  {#if shake}<button type="button" class="link" onclick={() => replay++}>shake again</button>{/if}
+  {#if shake}<button type="button" class="link" onclick={() => replay++}>{t("shake again")}</button>{/if}
 </div>

@@ -11,6 +11,7 @@
   import LineEditor from "./LineEditor.svelte";
   import LineTools from "./LineTools.svelte";
   import Marks from "./Marks.svelte";
+  import { t } from "./i18n.svelte";
   import { useReader } from "./reader.svelte";
   import TagChips from "./TagChips.svelte";
   import TextView from "./TextView.svelte";
@@ -42,9 +43,9 @@
     <span class="avw"><Face image={reader.face(line.speaker, line.tags)} name={line.speaker} /></span>
     <div class="lb">
       <div class="who">
-        {#if line.speaker}<span title={character?.name}><Hl text={line.speaker} /></span>{:else}<span class="narration">narration</span>{/if}
+        {#if line.speaker}<span title={character?.name}><Hl text={line.speaker} /></span>{:else}<span class="narration">{t("narration")}</span>{/if}
         <TagChips tags={line.tags} />
-        {#if line.concurrent}<span class="tid">at the same time</span>{/if}
+        {#if line.concurrent}<span class="tid">{t("at the same time")}</span>{/if}
         <Marks {marks} />
         {#if line.id && reader.showIds}<span class="tid">{line.id}</span>{/if}
       </div>

@@ -8,6 +8,7 @@
   import ConditionInput from "./ConditionInput.svelte";
   import { type Target, useEditor } from "./editor.svelte";
   import FacePicker from "./FacePicker.svelte";
+  import { t } from "./i18n.svelte";
   import { useReader } from "./reader.svelte";
 
   let {
@@ -55,6 +56,19 @@
   );
   const path = $derived(reader.view.script.files[target.file].path);
   const isNew = $derived(target.mode !== "edit");
+  const title = $derived(
+    isNew
+      ? target.choice
+        ? target.mode === "after"
+          ? t("New choice below")
+          : t("New choice above")
+        : target.mode === "after"
+          ? t("New line below")
+          : t("New line above")
+      : target.choice
+        ? t("Edit choice")
+        : t("Edit line"),
+  );
 
   function toggle(name: string, on: boolean) {
     if (on) tags[name] = null;
@@ -120,23 +134,23 @@
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <form class="line-editor" class:choice={target.choice} onsubmit={(e) => { e.preventDefault(); save(); }} onkeydown={keydown}>
   <div class="le-title k">
-    {isNew ? `New ${target.choice ? "choice" : "line"} ${target.mode === "after" ? "below" : "above"}` : `Edit ${target.choice ? "choice" : "line"}`}
+    {title}
     <span class="tid">{path}</span>
   </div>
   <div class="le-grid">
     <div class="le-fields">
-      <label class="le-field"><span class="k">Speaker</span>
-        <input type="text" bind:value={speaker} list="dm-speakers" placeholder="narration" spellcheck="false" />
+      <label class="le-field"><span class="k">{t("Speaker")}</span>
+        <input type="text" bind:value={speaker} list="dm-speakers" placeholder={t("narration")} spellcheck="false" />
       </label>
       <datalist id="dm-speakers">{#each reader.speakers as name (name)}<option value={name}></option>{/each}</datalist>
-      <label class="le-field"><span class="k">Words</span>
+      <label class="le-field"><span class="k">{t("Words")}</span>
         <textarea bind:this={wordsBox} bind:value={words} rows="3" spellcheck="true"></textarea>
       </label>
       <div class="le-row">
         {#if voice}
-          <label class="le-field inline"><span class="k">Voice</span>
+          <label class="le-field inline"><span class="k">{t("Voice")}</span>
             <select value={tags[voice.name] ?? ""} onchange={(e) => setVoice(e.currentTarget.value)}>
-              <option value="">plain</option>
+              <option value="">{t("plain")}</option>
               {#each voice.values as v (v)}<option value={v}>{v}</option>{/each}
             </select>
           </label>
@@ -144,15 +158,15 @@
         {#each switches as s (s.name)}
           <label class="tog" title={s.description ?? ""}>
             <input type="checkbox" checked={has(s.name)} onchange={(e) => toggle(s.name, e.currentTarget.checked)} />
-            {s.show ?? s.name}
+            {s.show === "thought" ? t("thought") : s.show === "shake" ? t("shake") : (s.show ?? s.name)}
           </label>
         {/each}
         {#each otherTags as name (name)}
           <span class="chip">{name}{tags[name] ? `=${tags[name]}` : ""}
-            <button type="button" class="link" aria-label="Remove {name}" onclick={() => delete tags[name]}>✕</button></span>
+            <button type="button" class="link" aria-label={t("Remove {name}", { name })} onclick={() => delete tags[name]}>✕</button></span>
         {/each}
       </div>
-      {#if target.choice}<ConditionInput bind:value={condition} label="Shown if" />{/if}
+      {#if target.choice}<ConditionInput bind:value={condition} label={t("Shown if")} />{/if}
     </div>
     <div class="le-side">
       <Balloon face={faceClass} speaker={speaker || null} {words} thought={showing("thought")} shake={showing("shake")} />
@@ -161,8 +175,8 @@
   {#if face && face.available.length > 0}<FacePicker tag={face.name} speaker={speaker || null} bind:value={faceValue} />{/if}
   {#if editor.error}<p class="error">{editor.error}</p>{/if}
   <div class="le-actions">
-    <button class="btn primary" type="submit" disabled={editor.busy}>{isNew ? "Add" : "Apply"}</button>
-    <button class="btn" type="button" onclick={() => (editor.target = null)}>Cancel</button>
-    <span class="tid">Ctrl+Enter applies · Esc cancels · nothing is written until you save</span>
+    <button class="btn primary" type="submit" disabled={editor.busy}>{isNew ? t("Add") : t("Apply")}</button>
+    <button class="btn" type="button" onclick={() => (editor.target = null)}>{t("Cancel")}</button>
+    <span class="tid">{t("Ctrl+Enter applies · Esc cancels · nothing is written until you save")}</span>
   </div>
 </form>

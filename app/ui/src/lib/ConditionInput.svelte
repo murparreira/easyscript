@@ -1,8 +1,9 @@
 <script lang="ts">
   // A condition, with the project's flags at hand.
+  import { t } from "./i18n.svelte";
   import { useReader } from "./reader.svelte";
 
-  let { value = $bindable(), label = "Condition" }: { value: string; label?: string } = $props();
+  let { value = $bindable(), label }: { value: string; label?: string } = $props();
   const reader = useReader();
   const known = $derived(new Set(reader.view.flags.map((f) => f.flag)));
   const call = $derived(reader.flagCall);
@@ -31,15 +32,15 @@
 </script>
 
 <div class="condition-input">
-  <label class="condition-field"><span class="k">{label}</span>
-    <input type="text" bind:value spellcheck="false" placeholder="always" /></label>
+  <label class="condition-field"><span class="k">{label ?? t("Condition")}</span>
+    <input type="text" bind:value spellcheck="false" placeholder={t("always")} /></label>
   {#if call && reader.view.flags.length > 0}
-    <select aria-label="Add a flag" onchange={(e) => { add(e.currentTarget.value); e.currentTarget.value = ""; }}>
-      <option value="">Add a flag…</option>
+    <select aria-label={t("Add a flag")} onchange={(e) => { add(e.currentTarget.value); e.currentTarget.value = ""; }}>
+      <option value="">{t("Add a flag…")}</option>
       {#each reader.view.flags as flag (flag.flag)}
         <option value={flag.flag}>{flag.flag}{flag.meaning ? ` — ${flag.meaning.slice(0, 60)}` : ""}</option>
       {/each}
     </select>
   {/if}
-  {#if unknown.length > 0}<p class="warn">Not a known flag: {unknown.join(", ")}</p>{/if}
+  {#if unknown.length > 0}<p class="warn">{t("Not a known flag: {flags}", { flags: unknown.join(", ") })}</p>{/if}
 </div>

@@ -5,6 +5,7 @@
   import type { TagView } from "./bindings/TagView";
   import { useEditor } from "./editor.svelte";
   import { walk } from "./model";
+  import { plural, t } from "./i18n.svelte";
   import { useReader } from "./reader.svelte";
   import { list } from "./text";
 
@@ -58,17 +59,17 @@
 </script>
 
 <section class="sec builder" id="b-tags">
-  <h2>Tags</h2>
-  <p class="lede">Line tags (<code>[#name=value]</code>): what each can hold, and how the views show it.</p>
+  <h2>{t("Tags")}</h2>
+  <p class="lede">{t("Line tags ([#name=value]): what each can hold, and how the views show it.")}</p>
 
   {#if missing.length > 0}
     <div class="bnote">
-      <p><b>Tags the script uses that the schema does not have:</b>
+      <p><b>{t("Tags the script uses that the schema does not have:")}</b>
         {#each missing as name (name)}<button type="button" class="link" onclick={() => open(null, name)}>{name}</button>{/each}
       </p>
     </div>
   {/if}
-  <div class="b-actions"><button class="btn" type="button" onclick={() => open(null)}>Add a tag</button></div>
+  <div class="b-actions"><button class="btn" type="button" onclick={() => open(null)}>{t("Add a tag")}</button></div>
   {#if form?.isNew}{@render editForm()}{/if}
 
   <ol class="cards">
@@ -80,12 +81,12 @@
         {:else}
           <div class="card-head">
             <div>
-              <h4><code>{tag.name}</code> <span class="chip">{tag.kind}</span>{#if tag.show}<span class="chip">shows as {tag.show}</span>{/if}</h4>
-              <div class="tid">on {used?.lines ?? 0} lines{tag.path ? ` · ${tag.path}` : ""}</div>
+              <h4><code>{tag.name}</code> <span class="chip">{tag.kind}</span>{#if tag.show}<span class="chip">{t("shows as {show}", { show: tag.show })}</span>{/if}</h4>
+              <div class="tid">{plural(used?.lines ?? 0, "on {n} line", "on {n} lines")}{tag.path ? ` · ${tag.path}` : ""}</div>
             </div>
             <div class="card-tools">
-              <button type="button" title="Edit" onclick={() => open(tag)}>✎</button>
-              <button type="button" title="Remove from the schema" onclick={() => editor.editProject([{ op: "remove_tag", name: tag.name }])}>✕</button>
+              <button type="button" title={t("Edit")} onclick={() => open(tag)}>✎</button>
+              <button type="button" title={t("Remove from the schema")} onclick={() => editor.editProject([{ op: "remove_tag", name: tag.name }])}>✕</button>
             </div>
           </div>
           {#if tag.description}<p class="role">{tag.description}</p>{/if}
@@ -93,15 +94,15 @@
             <div class="values">
               {#each tag.values as v (v)}<span class="chip">{v} <span class="tid">{used?.values.get(v) ?? 0}</span></span>{/each}
               {#each ordered(used?.values ?? new Map()).filter(([v]) => !tag.values.includes(v)) as [v, n] (v)}
-                <span class="chip bad" title="Not one of its values">{v} <span class="tid">{n}</span></span>
+                <span class="chip bad" title={t("Not one of its values")}>{v} <span class="tid">{n}</span></span>
               {/each}
             </div>
           {:else if tag.kind === "asset" && tag.show === "face" && tag.path}
-            <div class="gallery" aria-label="Its files">
+            <div class="gallery" aria-label={t("Its files")}>
               {#each tag.available.slice(0, 60) as v (v)}
-                <span class="av face {reader.imageClasses.get(tag.path.replace('{value}', v)) ?? ''}" title="{v}: {used?.values.get(v) ?? 0} lines"></span>
+                <span class="av face {reader.imageClasses.get(tag.path.replace('{value}', v)) ?? ''}" title={plural(used?.values.get(v) ?? 0, "{face}: {n} line", "{face}: {n} lines", { face: v })}></span>
               {/each}
-              {#if tag.available.length > 60}<span class="tid">and {tag.available.length - 60} more</span>{/if}
+              {#if tag.available.length > 60}<span class="tid">{t("and {n} more", { n: tag.available.length - 60 })}</span>{/if}
             </div>
           {/if}
         {/if}
@@ -113,36 +114,36 @@
 {#snippet editForm()}
   {#if form}
     <form class="line-editor" onsubmit={(e) => { e.preventDefault(); save(); }}>
-      <div class="le-title k">{form.isNew ? "New tag" : `Edit ${form.name}`}</div>
+      <div class="le-title k">{form.isNew ? t("New tag") : t("Edit {id}", { id: form.name })}</div>
       <div class="le-fields">
-        {#if form.isNew}<label class="le-field"><span class="k">Name</span><input bind:value={form.name} spellcheck="false" /></label>{/if}
+        {#if form.isNew}<label class="le-field"><span class="k">{t("Name")}</span><input bind:value={form.name} spellcheck="false" /></label>{/if}
         <div class="le-row">
-          <label class="le-field inline"><span class="k">Kind</span>
+          <label class="le-field inline"><span class="k">{t("Kind")}</span>
             <select bind:value={form.kind}>
-              <option value="flag">flag: present or not</option>
-              <option value="enum">enum: one of some values</option>
-              <option value="asset">asset: names a file</option>
-              <option value="text">text: anything</option>
+              <option value="flag">{t("flag: present or not")}</option>
+              <option value="enum">{t("enum: one of some values")}</option>
+              <option value="asset">{t("asset: names a file")}</option>
+              <option value="text">{t("text: anything")}</option>
             </select>
           </label>
-          <label class="le-field inline"><span class="k">Shows as</span>
+          <label class="le-field inline"><span class="k">{t("Shows as")}</span>
             <select bind:value={form.show}>
-              <option value="">nothing special</option>
-              <option value="face">the line's face</option>
-              <option value="voice">a voice mood</option>
-              <option value="thought">a thought</option>
-              <option value="shake">a shake</option>
+              <option value="">{t("nothing special")}</option>
+              <option value="face">{t("the line's face")}</option>
+              <option value="voice">{t("a voice mood")}</option>
+              <option value="thought">{t("a thought")}</option>
+              <option value="shake">{t("a shake")}</option>
             </select>
           </label>
         </div>
-        {#if form.kind === "enum"}<label class="le-field"><span class="k">Values (comma separated)</span><input bind:value={form.values} spellcheck="false" /></label>{/if}
-        {#if form.kind === "asset"}<label class="le-field"><span class="k">Where its file is, with {"{value}"}</span><input bind:value={form.path} placeholder="assets/faces/{'{value}'}.png" spellcheck="false" /></label>{/if}
-        <label class="le-field"><span class="k">Description</span><input bind:value={form.description} /></label>
+        {#if form.kind === "enum"}<label class="le-field"><span class="k">{t("Values (comma separated)")}</span><input bind:value={form.values} spellcheck="false" /></label>{/if}
+        {#if form.kind === "asset"}<label class="le-field"><span class="k">{t("Where its file is, with {value}")}</span><input bind:value={form.path} placeholder="assets/faces/{'{value}'}.png" spellcheck="false" /></label>{/if}
+        <label class="le-field"><span class="k">{t("Description")}</span><input bind:value={form.description} /></label>
       </div>
       {#if editor.error}<p class="error">{editor.error}</p>{/if}
       <div class="le-actions">
-        <button class="btn primary" type="submit" disabled={editor.busy}>{form.isNew ? "Add" : "Apply"}</button>
-        <button class="btn" type="button" onclick={() => (form = null)}>Cancel</button>
+        <button class="btn primary" type="submit" disabled={editor.busy}>{form.isNew ? t("Add") : t("Apply")}</button>
+        <button class="btn" type="button" onclick={() => (form = null)}>{t("Cancel")}</button>
       </div>
     </form>
   {/if}

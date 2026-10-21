@@ -4,6 +4,7 @@
   import type { CharacterView } from "./bindings/CharacterView";
   import { useEditor } from "./editor.svelte";
   import Face from "./Face.svelte";
+  import { plural, t } from "./i18n.svelte";
   import { useReader } from "./reader.svelte";
   import { list, slug } from "./text";
 
@@ -49,20 +50,20 @@
 </script>
 
 <section class="sec builder" id="b-characters">
-  <h2>Characters</h2>
-  <p class="lede">Who speaks, under which names in the files, and the face their lines show when no tag picks another.</p>
+  <h2>{t("Characters")}</h2>
+  <p class="lede">{t("Who speaks, under which names in the files, and the face their lines show when no tag picks another.")}</p>
 
   {#if unclaimed.length > 0}
     <div class="bnote">
-      <p><b>Speakers no character claims</b> (checks warn about their lines):</p>
+      <p>{t("Speakers no character claims (checks warn about their lines):")}</p>
       <ul class="claims">
         {#each unclaimed as s (s.name)}
           <li>
-            <b>{s.name}</b> <span class="tid">{s.count} lines</span>
-            <button type="button" class="link" onclick={() => open(null, s.name)}>new character</button>
+            <b>{s.name}</b> <span class="tid">{plural(s.count, "{n} line", "{n} lines")}</span>
+            <button type="button" class="link" onclick={() => open(null, s.name)}>{t("new character")}</button>
             {#if characters.length > 0}
-              <select aria-label="Add {s.name} to a character" onchange={(e) => { const c = characters.find((x) => x.id === e.currentTarget.value); if (c) join(c, s.name); }}>
-                <option value="">add to…</option>
+              <select aria-label={t("Add {name} to a character", { name: s.name })} onchange={(e) => { const c = characters.find((x) => x.id === e.currentTarget.value); if (c) join(c, s.name); }}>
+                <option value="">{t("add to…")}</option>
                 {#each characters as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
               </select>
             {/if}
@@ -72,7 +73,7 @@
     </div>
   {/if}
 
-  <div class="b-actions"><button class="btn" type="button" onclick={() => open(null)}>Add a character</button></div>
+  <div class="b-actions"><button class="btn" type="button" onclick={() => open(null)}>{t("Add a character")}</button></div>
 
   {#if form?.isNew}{@render editForm()}{/if}
 
@@ -86,20 +87,20 @@
             <Face image={c.portrait ? (reader.imageClasses.get(c.portrait) ?? null) : null} name={c.name} />
             <div>
               <h4>{c.name} <span class="tid">{c.id}</span></h4>
-              <div class="tid">{c.speakers.join(" · ")} · {total(c)} lines</div>
+              <div class="tid">{c.speakers.join(" · ")} · {plural(total(c), "{n} line", "{n} lines")}</div>
             </div>
             <div class="card-tools">
-              <button type="button" title="Edit" onclick={() => open(c)}>✎</button>
-              <button type="button" title="Move up" disabled={i === 0} onclick={() => editor.editProject([{ op: "move_character", id: c.id, up: true }])}>↑</button>
-              <button type="button" title="Move down" disabled={i === characters.length - 1} onclick={() => editor.editProject([{ op: "move_character", id: c.id, up: false }])}>↓</button>
-              <button type="button" title="Remove" onclick={() => editor.editProject([{ op: "remove_character", id: c.id }])}>✕</button>
+              <button type="button" title={t("Edit")} onclick={() => open(c)}>✎</button>
+              <button type="button" title={t("Move up")} disabled={i === 0} onclick={() => editor.editProject([{ op: "move_character", id: c.id, up: true }])}>↑</button>
+              <button type="button" title={t("Move down")} disabled={i === characters.length - 1} onclick={() => editor.editProject([{ op: "move_character", id: c.id, up: false }])}>↓</button>
+              <button type="button" title={t("Remove")} onclick={() => editor.editProject([{ op: "remove_character", id: c.id }])}>✕</button>
             </div>
           </div>
           {#if c.role}<p class="role">{c.role}</p>{/if}
-          {#if c.voices.length > 0}<div class="values"><span class="k">Voice</span>{#each c.voices as v (v)}<span class="vtag">{v}</span>{/each}</div>{/if}
+          {#if c.voices.length > 0}<div class="values"><span class="k">{t("Voice")}</span>{#each c.voices as v (v)}<span class="vtag">{v}</span>{/each}</div>{/if}
           {@const faces = c.speakers.flatMap((s) => reader.facesBySpeaker.get(s) ?? [])}
           {#if faces.length > 0 && faceTag?.path}
-            <div class="gallery" aria-label="Faces their lines use">
+            <div class="gallery" aria-label={t("Faces their lines use")}>
               {#each [...new Set(faces)] as face (face)}
                 <span class="av face {reader.imageClasses.get(faceTag.path.replace('{value}', face)) ?? ''}" title={face}></span>
               {/each}
@@ -114,15 +115,15 @@
 {#snippet editForm()}
   {#if form}
     <form class="line-editor" onsubmit={(e) => { e.preventDefault(); save(); }}>
-      <div class="le-title k">{form.isNew ? "New character" : `Edit ${form.id}`}</div>
+      <div class="le-title k">{form.isNew ? t("New character") : t("Edit {id}", { id: form.id })}</div>
       <div class="le-grid">
         <div class="le-fields">
-          {#if form.isNew}<label class="le-field"><span class="k">Id</span><input bind:value={form.id} spellcheck="false" /></label>{/if}
-          <label class="le-field"><span class="k">Name</span><input bind:value={form.name} /></label>
-          <label class="le-field"><span class="k">Speaker names in the files (comma separated)</span><input bind:value={form.speakers} spellcheck="false" /></label>
-          <label class="le-field"><span class="k">Role</span><textarea bind:value={form.role} rows="2"></textarea></label>
+          {#if form.isNew}<label class="le-field"><span class="k">{t("Id")}</span><input bind:value={form.id} spellcheck="false" /></label>{/if}
+          <label class="le-field"><span class="k">{t("Name")}</span><input bind:value={form.name} /></label>
+          <label class="le-field"><span class="k">{t("Speaker names in the files (comma separated)")}</span><input bind:value={form.speakers} spellcheck="false" /></label>
+          <label class="le-field"><span class="k">{t("Role")}</span><textarea bind:value={form.role} rows="2"></textarea></label>
           {#if voiceTag}
-            <fieldset class="voices"><legend class="k">Voice moods recorded (none: not tracked)</legend>
+            <fieldset class="voices"><legend class="k">{t("Voice moods recorded (none: not tracked)")}</legend>
               {#each voiceTag.values as v (v)}
                 <label class="tog"><input type="checkbox" checked={form.voices.includes(v)} onchange={(e) => form && (form.voices = e.currentTarget.checked ? [...form.voices, v] : form.voices.filter((x) => x !== v))} /> {v}</label>
               {/each}
@@ -130,22 +131,22 @@
           {/if}
         </div>
         <div class="le-side">
-          <span class="k">Portrait</span>
+          <span class="k">{t("Portrait")}</span>
           <div class="face-grid">
-            <button type="button" class="face-option" class:chosen={!form.portrait} title="none" onclick={() => form && (form.portrait = "")}><span class="av mono-av">—</span></button>
+            <button type="button" class="face-option" class:chosen={!form.portrait} title={t("none")} onclick={() => form && (form.portrait = "")}><span class="av mono-av">—</span></button>
             {#each portraits as path (path)}
               <button type="button" class="face-option" class:chosen={form.portrait === path} title={path} onclick={() => form && (form.portrait = path)}>
                 <span class="av face {reader.imageClasses.get(path) ?? ''}"></span>
               </button>
             {/each}
           </div>
-          <input bind:value={form.portrait} placeholder="path/to/portrait.png" spellcheck="false" aria-label="Portrait path" />
+          <input bind:value={form.portrait} placeholder="path/to/portrait.png" spellcheck="false" aria-label={t("Portrait path")} />
         </div>
       </div>
       {#if editor.error}<p class="error">{editor.error}</p>{/if}
       <div class="le-actions">
-        <button class="btn primary" type="submit" disabled={editor.busy}>{form.isNew ? "Add" : "Apply"}</button>
-        <button class="btn" type="button" onclick={() => (form = null)}>Cancel</button>
+        <button class="btn primary" type="submit" disabled={editor.busy}>{form.isNew ? t("Add") : t("Apply")}</button>
+        <button class="btn" type="button" onclick={() => (form = null)}>{t("Cancel")}</button>
       </div>
     </form>
   {/if}
