@@ -1,5 +1,5 @@
 <script lang="ts">
-  // The project file's builders: everything the dialogue files cannot say.
+  // The project file's builders, one tab each: everything the dialogue files cannot say.
   import CharactersBuilder from "./CharactersBuilder.svelte";
   import { useEditor } from "./editor.svelte";
   import FlagsBuilder from "./FlagsBuilder.svelte";
@@ -9,6 +9,16 @@
   import VariantsBuilder from "./VariantsBuilder.svelte";
 
   const editor = useEditor()!;
+  type Part = "characters" | "tags" | "flags" | "places" | "variants";
+  let part: Part = $state("characters");
+  const parts: { id: Part; name: () => string; about: () => string }[] = [
+    { id: "characters", name: () => t("Characters"), about: () => t("Who speaks: their names in the script, portraits, faces and voice moods.") },
+    { id: "tags", name: () => t("Tags"), about: () => t("What the tags on lines mean, and how the app shows them.") },
+    { id: "flags", name: () => t("Flags"), about: () => t("What each flag means, where it is set and read.") },
+    { id: "places", name: () => t("Places"), about: () => t("Where scenes play: the order of the script, and the groups places go in.") },
+    { id: "variants", name: () => t("Variants"), about: () => t("Ways the game can be played (a mode, a difficulty), to read one at a time.") },
+  ];
+  const current = $derived(parts.find((p) => p.id === part)!);
 </script>
 
 <div class="project-panel">
@@ -22,14 +32,18 @@
       {#if editor.error}<p class="error">{editor.error}</p>{/if}
     </section>
   {:else}
-    <p class="lede">{t("Editing {file}. Changes keep its comments and order, and are written on save.", { file: editor.state.project_file })}</p>
-    <nav class="builder-nav" aria-label={t("Builders")}>
-      <a href="#b-characters">{t("Characters")}</a><a href="#b-tags">{t("Tags")}</a><a href="#b-flags">{t("Flags")}</a><a href="#b-places">{t("Places")}</a><a href="#b-variants">{t("Variants")}</a>
-    </nav>
-    <CharactersBuilder />
-    <TagsBuilder />
-    <FlagsBuilder />
-    <PlacesBuilder />
-    <VariantsBuilder />
+    <div class="project-head">
+      <div class="tabs inline" role="tablist" aria-label={t("Builders")}>
+        {#each parts as p (p.id)}
+          <button type="button" role="tab" aria-selected={part === p.id} onclick={() => (part = p.id)}>{p.name()}</button>
+        {/each}
+      </div>
+      <p class="hint">{current.about()} {t("Saved in {file}, keeping its comments and order.", { file: editor.state.project_file })}</p>
+    </div>
+    {#if part === "characters"}<CharactersBuilder />
+    {:else if part === "tags"}<TagsBuilder />
+    {:else if part === "flags"}<FlagsBuilder />
+    {:else if part === "places"}<PlacesBuilder />
+    {:else}<VariantsBuilder />{/if}
   {/if}
 </div>

@@ -1,5 +1,5 @@
 <script lang="ts">
-  // A list of script steps, nested ones drawn inside their menus and branches.
+  // A list of script steps to read, nested ones drawn inside their menus and branches.
   import type { Node } from "./bindings/Node";
   import Expr from "./Expr.svelte";
   import FlagChip from "./FlagChip.svelte";
@@ -10,10 +10,6 @@
   import { armSides, conditionSide } from "./model";
   import Nodes from "./Nodes.svelte";
   import Notes from "./Notes.svelte";
-  import ConditionInput from "./ConditionInput.svelte";
-  import { useEditor } from "./editor.svelte";
-  import LineEditor from "./LineEditor.svelte";
-  import LineTools from "./LineTools.svelte";
   import { t } from "./i18n.svelte";
   import { useReader } from "./reader.svelte";
   import TagChips from "./TagChips.svelte";
@@ -21,37 +17,12 @@
 
   let { nodes }: { nodes: Node[] } = $props();
   const reader = useReader();
-  const editor = useEditor();
-
-  // The condition being edited, by where its line starts, and its new text.
-  let conditionAt: number | null = $state(null);
-  let conditionText = $state("");
-  async function saveCondition(file: number, at: number) {
-    const path = reader.view.script.files[file].path;
-    if ((await editor?.edit(path, [{ op: "set_condition", at, condition: conditionText.trim() || null }])) != null) {
-      conditionAt = null;
-    }
-  }
 </script>
-
-{#snippet conditionEditor(file: number, at: number, condition: string | null)}
-  {#if editor?.on}
-    {#if conditionAt === at}
-      <form class="cond-edit" onsubmit={(e) => { e.preventDefault(); saveCondition(file, at); }}>
-        <ConditionInput bind:value={conditionText} />
-        <button class="btn primary" type="submit" disabled={editor.busy}>{t("Apply")}</button>
-        <button class="btn" type="button" onclick={() => (conditionAt = null)}>{t("Cancel")}</button>
-      </form>
-    {:else}
-      <button type="button" class="link" title={t("Edit the condition")} onclick={() => { conditionAt = at; conditionText = condition ?? ""; }}>✎</button>
-    {/if}
-  {/if}
-{/snippet}
 
 {#each nodes as node, i (i)}
   <Notes notes={node.notes} />
   {#if node.type === "line"}
-    <LineView line={node} marks={node.marks} span={node.span} />
+    <LineView line={node} marks={node.marks} />
   {:else if node.type === "menu"}
     <div class="menu" class:thought={node.choices.every((c) => reader.shown(c.tags, "thought").length > 0)}>
       <div class="menu-h">{t("Choices")}</div>
@@ -61,29 +32,22 @@
           {#if !reader.hides(side)}
             <li>
               <Notes notes={choice.notes} />
-              {#if editor?.is(choice.span.file, choice.span.start, "edit")}
-                <LineEditor target={editor.target!} speaker={choice.speaker} words={choice.words} tags={choice.tags} condition={choice.condition} />
-              {:else}
-                {#if editor?.is(choice.span.file, choice.span.start, "before")}<LineEditor target={editor.target!} />{/if}
-                <div class="opt-row" class:editable={editor?.on}>
-                  <div>
-                    <div class="opt" class:marked={choice.marks.length > 0}>
-                      {#if choice.speaker}<span class="who-inline"><Hl text={choice.speaker} />:</span>{/if}
-                      <TextView segments={choice.text} />
-                    </div>
-                    <div class="opt-meta">
-                      {#if side}<span class="chip variant" class:yes={side.side}>{side.side ? side.variant.if_true : side.variant.if_false}</span>
-                      {:else if choice.condition}<span class="when">{t("shown if")}</span> <Expr expr={choice.condition} />{/if}
-                      <TagChips tags={choice.tags} />
-                      <Marks marks={choice.marks} />
-                      {#if choice.jump}<JumpView jump={choice.jump} inline />{/if}
-                    </div>
+              <div class="opt-row">
+                <div>
+                  <div class="opt" class:marked={choice.marks.length > 0}>
+                    {#if choice.speaker}<span class="who-inline"><Hl text={choice.speaker} />:</span>{/if}
+                    <TextView segments={choice.text} />
                   </div>
-                  {#if editor?.on}<LineTools span={choice.span} choice={true} />{/if}
+                  <div class="opt-meta">
+                    {#if side}<span class="chip variant" class:yes={side.side}>{side.side ? side.variant.if_true : side.variant.if_false}</span>
+                    {:else if choice.condition}<span class="when">{t("shown if")}</span> <Expr expr={choice.condition} />{/if}
+                    <TagChips tags={choice.tags} />
+                    <Marks marks={choice.marks} />
+                    {#if choice.jump}<JumpView jump={choice.jump} inline />{/if}
+                  </div>
                 </div>
-              {/if}
+              </div>
               {#if choice.body.length > 0}<div class="branch"><Nodes nodes={choice.body} /></div>{/if}
-              {#if editor?.is(choice.span.file, choice.span.start, "after")}<LineEditor target={editor.target!} />{/if}
             </li>
           {/if}
         {/each}
@@ -104,7 +68,6 @@
                 <span class="kw">{arm.keyword === "elif" ? t("else if") : arm.keyword === "else" ? t("else") : t("if")}</span>
                 {#if arm.condition}<Expr expr={arm.condition} />{/if}
               {/if}
-              {#if arm.keyword !== "else"}{@render conditionEditor(arm.span.file, arm.span.start, arm.condition)}{/if}
               <Marks marks={arm.marks} />
             </div>
             <div class="branch">
@@ -125,7 +88,6 @@
             <span class="kw">{arm.keyword === "when" ? t("when") : t("otherwise")}</span>
             {#if arm.condition && flags}<FlagChip flag={arm.condition.replace(/^&?["']|["']$/g, "")} />
             {:else if arm.condition}<Expr expr={arm.condition} />{/if}
-            {#if arm.keyword === "when"}{@render conditionEditor(arm.span.file, arm.span.start, arm.condition)}{/if}
           </div>
           <div class="branch"><Nodes nodes={arm.body} /></div>
         </div>

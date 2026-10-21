@@ -11,10 +11,20 @@ import { type GroupOut, type Side, labelText, organize, walk } from "./model";
 import { normalize } from "./text";
 
 export type VariantChoice = "all" | "true" | "false";
+/** What the app shows: writing a scene, the story map, the whole script to read, or (in
+ *  the app) the project file. */
+export type Tab = "write" | "map" | "read" | "project";
+export type Theme = "system" | "light" | "dark";
 
 const PREFS = "dialogue-maker:reader";
 
-type Prefs = { variants: Record<string, VariantChoice>; showIds: boolean; showMarks: boolean };
+type Prefs = {
+  variants: Record<string, VariantChoice>;
+  showIds: boolean;
+  showMarks: boolean;
+  theme: Theme;
+  playOpen: boolean;
+};
 
 function loadPrefs(): Partial<Prefs> {
   try {
@@ -30,8 +40,18 @@ export class Reader {
   variants: Record<string, VariantChoice> = $state({});
   showIds = $state(true);
   showMarks = $state(false);
-  /** What the reader looks at: the script, the story map, or (in the app) the project file. */
-  tab: "script" | "map" | "project" = $state("script");
+  theme: Theme = $state("system");
+  /** The play panel beside the scene being written. */
+  playOpen = $state(true);
+  /** Editing is possible (the desktop app); the static page reads. */
+  writable: boolean;
+  tab: Tab = $state("read");
+  /** The scene being written: a label's id. */
+  scene: string | null = $state(null);
+  /** Labels by id (the first, if two files have the same). */
+  byId: Map<string, Label>;
+  /** Asked to play from a label (a new object each time, so asking again plays again). */
+  playFrom: { label: string } | null = $state(null);
 
   /** The search, normalized; searching starts at two characters. */
   q: string;
@@ -51,13 +71,16 @@ export class Reader {
   /** How the script calls a flag in a condition, with `{flag}` for its name. */
   flagCall: string | null;
 
-  constructor(view: ReadView) {
+  constructor(view: ReadView, writable = false) {
     this.view = $state.raw(view);
+    this.writable = writable;
+    this.tab = writable ? "write" : "read";
     this.q = $derived(normalize(this.query.trim()));
     this.searching = $derived(this.q.length > 1);
     this.groups = $derived(organize(this.view));
     this.labelTexts = $derived(new Map(this.allLabels().map((l) => [l, labelText(l)])));
     this.labelIds = $derived(new Set(this.allLabels().map((l) => l.id)));
+    this.byId = $derived(new Map(this.allLabels().reverse().map((l) => [l.id, l])));
     this.characters = $derived(new Map(this.view.characters.flatMap((c) => c.speakers.map((s) => [s, c] as const))));
     this.tagSpecs = $derived(new Map(this.view.tags.map((t) => [t.name, t])));
     this.imageClasses = $derived(new Map(Object.keys(this.view.images).map((key, i) => [key, `img-${i}`])));
@@ -75,9 +98,17 @@ export class Reader {
     this.variants = prefs.variants ?? {};
     this.showIds = prefs.showIds ?? true;
     this.showMarks = prefs.showMarks ?? false;
+    this.theme = prefs.theme ?? "system";
+    this.playOpen = prefs.playOpen ?? true;
     $effect.root(() => {
       $effect(() => {
-        const prefs: Prefs = { variants: this.variants, showIds: this.showIds, showMarks: this.showMarks };
+        const prefs: Prefs = {
+          variants: this.variants,
+          showIds: this.showIds,
+          showMarks: this.showMarks,
+          theme: this.theme,
+          playOpen: this.playOpen,
+        };
         try {
           localStorage.setItem(PREFS, JSON.stringify(prefs));
         } catch {
@@ -119,9 +150,21 @@ export class Reader {
     return portrait ? (this.imageClasses.get(portrait) ?? null) : null;
   }
 
-  /** Show a label in the script: from the map, or a link elsewhere. */
+  /** The scene being written, or the first one. */
+  current(): Label | undefined {
+    const first = this.groups[0]?.places[0]?.files[0]?.sections.find((s) => s.labels.length > 0)?.labels[0];
+    return (this.scene ? this.byId.get(this.scene) : undefined) ?? first ?? this.allLabels()[0];
+  }
+
+  /** Show a label: to write it, in the app; in the whole script, in the static page or
+   *  when reading. */
   goTo(label: string) {
-    this.tab = "script";
+    if (this.writable && this.tab !== "read") {
+      this.tab = "write";
+      this.scene = label;
+      return;
+    }
+    this.tab = "read";
     setTimeout(() => {
       location.hash = `l-${label}`;
       document.getElementById(`l-${label}`)?.scrollIntoView({ block: "start", behavior: "instant" });

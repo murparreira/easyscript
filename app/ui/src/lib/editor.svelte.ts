@@ -9,8 +9,9 @@ import type { EditState } from "./bindings/EditState";
 import type { FileDiff } from "./bindings/FileDiff";
 import type { Session } from "./bindings/Session";
 
-/** The line an editor is open on: editing it, or adding a line before or after it. */
-export type Target = { file: number; at: number; mode: "edit" | "before" | "after"; choice: boolean };
+/** The line an editor is open on: editing it, or adding a line before or after it, or
+ *  under it (in a choice or a condition). */
+export type Target = { file: number; at: number; mode: "edit" | "before" | "after" | "under"; choice: boolean };
 
 export class Editor {
   state: EditState = $state({ changed: [], conflicts: [], can_undo: false, can_redo: false, project_file: "", has_project_file: false });

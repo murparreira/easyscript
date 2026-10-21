@@ -585,6 +585,19 @@ async fn export_script(
     .await
 }
 
+/// A dialogue file's text as the app has it: unsaved edits included.
+#[tauri::command]
+async fn dialogue_text(path: String, opened: State<'_, Opened>) -> Result<String, String> {
+    with_workspace(&opened, move |ws| {
+        let project = ws.project();
+        let index = project
+            .file_index(&path)
+            .ok_or_else(|| format!("{path} is not one of the dialogue files"))?;
+        Ok(project.files[index].text.clone())
+    })
+    .await
+}
+
 /// The project's dialogue files (those at `paths`, or all) as a ZIP at `path`, at their
 /// paths in the project, unsaved edits included.
 #[tauri::command]
@@ -786,6 +799,7 @@ fn app<R: Runtime>(builder: Builder<R>, github: GitHubSession) -> Builder<R> {
             github_link,
             export_script,
             export_dialogue_zip,
+            dialogue_text,
             import_preview,
             import_write,
             startup_project
