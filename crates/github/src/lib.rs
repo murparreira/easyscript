@@ -438,8 +438,8 @@ mod tests {
             r("murparreira", "easyscript")
         );
         assert_eq!(
-            github_repo("git@github.com:BusyBoys/na-cabeca-do-bicho.git"),
-            r("BusyBoys", "na-cabeca-do-bicho")
+            github_repo("git@github.com:some-team/some-game.git"),
+            r("some-team", "some-game")
         );
         assert_eq!(github_repo("ssh://git@github.com/a/b"), r("a", "b"));
         assert_eq!(github_repo("https://gitlab.com/a/b.git"), None);

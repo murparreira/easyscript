@@ -51,7 +51,7 @@ dialogue-maker import story.ink -o path/to/game/dialogue/story.dialogue
 
 All read `dialogue-maker.toml` at the game's root, or the file given with `--config`. See [the project file](docs/project-file.md).
 
-Installers and command-line builds for the three systems come from the release workflow (a `v*` tag, or a manual run). They are not signed yet.
+Installers and command-line builds for the three systems come from the release workflow (a `v*` tag, or a manual run). They are not signed yet: see [releasing](docs/release.md) for signing, updates and the public name.
 
 ## Develop
 
