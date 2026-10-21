@@ -1,6 +1,7 @@
 //! A project's script in other formats. Each takes the project (for its files and project
 //! file) and its script (see [`dm_core::lower`]), and returns the text to write.
 
+pub mod archive;
 pub mod fountain;
 pub mod json;
 pub mod translation;

@@ -477,6 +477,7 @@ fn insert_lines() {
         |at| Edit::InsertLine {
             at,
             after: true,
+            under: false,
             line: new(false, Some("Sailor"), "Will it hold?"),
         },
         expect![[r#"
@@ -502,6 +503,7 @@ fn insert_lines() {
         |at| Edit::InsertLine {
             at,
             after: true,
+            under: false,
             line: new(true, None, "Say nothing"),
         },
         expect![[r#"
@@ -527,6 +529,7 @@ fn insert_lines() {
         |at| Edit::InsertLine {
             at,
             after: false,
+            under: false,
             line: new(true, None, "Wait"),
         },
         expect![[r#"
@@ -552,6 +555,7 @@ fn insert_lines() {
         |at| Edit::InsertLine {
             at,
             after: true,
+            under: false,
             line: new(false, None, "- not a choice"),
         },
         expect![[r#"
@@ -584,6 +588,7 @@ fn insert_a_choice_with_tags_and_condition() {
             value: None,
         }],
         condition: Some("has_flag(\"oil\")".into()),
+        jump: None,
     };
     check(
         SCRIPT,
@@ -591,6 +596,7 @@ fn insert_a_choice_with_tags_and_condition() {
         |at| Edit::InsertLine {
             at,
             after: true,
+            under: false,
             line: line.clone(),
         },
         expect![[r#"
@@ -717,6 +723,7 @@ fn crlf_and_no_final_newline() {
         |at| Edit::InsertLine {
             at,
             after: true,
+            under: false,
             line: NewLine {
                 choice: false,
                 speaker: None,
@@ -737,6 +744,7 @@ fn crlf_and_no_final_newline() {
         |at| Edit::InsertLine {
             at,
             after: true,
+            under: false,
             line: NewLine {
                 choice: false,
                 speaker: None,
@@ -835,6 +843,7 @@ mod random {
                 Edit::InsertLine {
                     at,
                     after,
+                    under: false,
                     line: NewLine {
                         choice,
                         speaker: None,
@@ -881,4 +890,511 @@ mod random {
             }
         }
     }
+}
+
+#[test]
+fn insert_under_a_choice_or_condition() {
+    let new = |choice: bool, speaker: Option<&'static str>, text: &'static str| NewLine {
+        choice,
+        speaker: speaker.map(Into::into),
+        text: text.into(),
+        ..Default::default()
+    };
+    // After the lines there.
+    check(
+        SCRIPT,
+        4,
+        |at| Edit::InsertLine {
+            at,
+            after: true,
+            under: true,
+            line: new(false, Some("Keeper"), "Mind the step."),
+        },
+        expect![[r#"
+            at line 6
+            ~ start
+            Keeper: Another storm. [#face=keeper_calm, mood=calm]
+            A gull cries.
+            - Ask about the oil [if not has_flag("asked")]
+            	Keeper: In the shed.
+            	Keeper: Mind the step.
+            # ✏ prod
+            - Leave => bye
+            if Globals.easy()
+            	Keeper: Easy.
+            else
+            	Keeper: Hard.
+            => END
+        "#]],
+    );
+    // A choice with nothing under it yet: one tab in, as the file nests.
+    check(
+        SCRIPT,
+        7,
+        |at| Edit::InsertLine {
+            at,
+            after: true,
+            under: true,
+            line: new(false, None, "The door shuts."),
+        },
+        expect![[r#"
+            at line 8
+            ~ start
+            Keeper: Another storm. [#face=keeper_calm, mood=calm]
+            A gull cries.
+            - Ask about the oil [if not has_flag("asked")]
+            	Keeper: In the shed.
+            # ✏ prod
+            - Leave => bye
+            	The door shuts.
+            if Globals.easy()
+            	Keeper: Easy.
+            else
+            	Keeper: Hard.
+            => END
+        "#]],
+    );
+    // A file that nests with spaces.
+    check(
+        "~ a\n- Go\n    Keeper: Fine.\n- Stay\n",
+        4,
+        |at| Edit::InsertLine {
+            at,
+            after: true,
+            under: true,
+            line: new(true, None, "Really stay"),
+        },
+        expect![[r#"
+            at line 5
+            ~ a
+            - Go
+                Keeper: Fine.
+            - Stay
+                - Really stay
+        "#]],
+    );
+    check(
+        SCRIPT,
+        2,
+        |at| Edit::InsertLine {
+            at,
+            after: true,
+            under: true,
+            line: new(false, None, "No."),
+        },
+        expect!["refused: lines go under a choice or a condition only"],
+    );
+}
+
+#[test]
+fn jumps() {
+    let jump = |target: Option<&'static str>| {
+        move |at| Edit::SetJump {
+            at,
+            target: target.map(Into::into),
+        }
+    };
+    check(
+        SCRIPT,
+        3,
+        jump(Some("harbour")),
+        expect![[r#"
+        at line 3
+        ~ start
+        Keeper: Another storm. [#face=keeper_calm, mood=calm]
+        A gull cries. => harbour
+        - Ask about the oil [if not has_flag("asked")]
+        	Keeper: In the shed.
+        # ✏ prod
+        - Leave => bye
+        if Globals.easy()
+        	Keeper: Easy.
+        else
+        	Keeper: Hard.
+        => END
+    "#]],
+    );
+    check(
+        SCRIPT,
+        2,
+        jump(Some("END")),
+        expect![[r#"
+        at line 2
+        ~ start
+        Keeper: Another storm. [#face=keeper_calm, mood=calm] => END
+        A gull cries.
+        - Ask about the oil [if not has_flag("asked")]
+        	Keeper: In the shed.
+        # ✏ prod
+        - Leave => bye
+        if Globals.easy()
+        	Keeper: Easy.
+        else
+        	Keeper: Hard.
+        => END
+    "#]],
+    );
+    check(
+        SCRIPT,
+        4,
+        jump(Some("shed")),
+        expect![[r#"
+        at line 4
+        ~ start
+        Keeper: Another storm. [#face=keeper_calm, mood=calm]
+        A gull cries.
+        - Ask about the oil => shed [if not has_flag("asked")]
+        	Keeper: In the shed.
+        # ✏ prod
+        - Leave => bye
+        if Globals.easy()
+        	Keeper: Easy.
+        else
+        	Keeper: Hard.
+        => END
+    "#]],
+    );
+    check(
+        SCRIPT,
+        7,
+        jump(Some("END!")),
+        expect![[r#"
+        at line 7
+        ~ start
+        Keeper: Another storm. [#face=keeper_calm, mood=calm]
+        A gull cries.
+        - Ask about the oil [if not has_flag("asked")]
+        	Keeper: In the shed.
+        # ✏ prod
+        - Leave => END!
+        if Globals.easy()
+        	Keeper: Easy.
+        else
+        	Keeper: Hard.
+        => END
+    "#]],
+    );
+    check(
+        SCRIPT,
+        7,
+        jump(None),
+        expect![[r#"
+        at line 7
+        ~ start
+        Keeper: Another storm. [#face=keeper_calm, mood=calm]
+        A gull cries.
+        - Ask about the oil [if not has_flag("asked")]
+        	Keeper: In the shed.
+        # ✏ prod
+        - Leave
+        if Globals.easy()
+        	Keeper: Easy.
+        else
+        	Keeper: Hard.
+        => END
+    "#]],
+    );
+    check(
+        SCRIPT,
+        12,
+        jump(Some("start")),
+        expect![[r#"
+        at line 12
+        ~ start
+        Keeper: Another storm. [#face=keeper_calm, mood=calm]
+        A gull cries.
+        - Ask about the oil [if not has_flag("asked")]
+        	Keeper: In the shed.
+        # ✏ prod
+        - Leave => bye
+        if Globals.easy()
+        	Keeper: Easy.
+        else
+        	Keeper: Hard.
+        => start
+    "#]],
+    );
+    check(
+        SCRIPT,
+        12,
+        jump(None),
+        expect!["refused: this line only jumps; remove the line instead"],
+    );
+    check(
+        SCRIPT,
+        3,
+        jump(Some("not a title")),
+        expect!["refused: `not a title` is not a title to go to"],
+    );
+    // A line that only jumps, and a choice that goes somewhere.
+    check(
+        SCRIPT,
+        3,
+        |at| Edit::InsertLine {
+            at,
+            after: true,
+            under: false,
+            line: NewLine {
+                jump: Some("harbour".into()),
+                ..Default::default()
+            },
+        },
+        expect![[r#"
+            at line 4
+            ~ start
+            Keeper: Another storm. [#face=keeper_calm, mood=calm]
+            A gull cries.
+            => harbour
+            - Ask about the oil [if not has_flag("asked")]
+            	Keeper: In the shed.
+            # ✏ prod
+            - Leave => bye
+            if Globals.easy()
+            	Keeper: Easy.
+            else
+            	Keeper: Hard.
+            => END
+        "#]],
+    );
+    check(
+        SCRIPT,
+        7,
+        |at| Edit::InsertLine {
+            at,
+            after: true,
+            under: false,
+            line: NewLine {
+                choice: true,
+                text: "Run".into(),
+                tags: vec![dm_core::edit::NewTag {
+                    name: "thought".into(),
+                    value: None,
+                }],
+                condition: Some("brave".into()),
+                jump: Some("harbour".into()),
+                ..Default::default()
+            },
+        },
+        expect![[r#"
+            at line 8
+            ~ start
+            Keeper: Another storm. [#face=keeper_calm, mood=calm]
+            A gull cries.
+            - Ask about the oil [if not has_flag("asked")]
+            	Keeper: In the shed.
+            # ✏ prod
+            - Leave => bye
+            - Run [#thought] => harbour [if brave]
+            if Globals.easy()
+            	Keeper: Easy.
+            else
+            	Keeper: Hard.
+            => END
+        "#]],
+    );
+}
+
+const LABELS: &str = "\
+# The harbour
+~ start
+Keeper: Another storm.
+=> END
+
+## Only at night.
+~ night
+A gull cries.
+# for the next one
+
+~ last
+=> END
+";
+
+#[test]
+fn add_labels() {
+    let add = |id: &'static str, after: bool| {
+        move |at| Edit::AddLabel {
+            at: after.then_some(at),
+            id: id.into(),
+        }
+    };
+    check(
+        LABELS,
+        2,
+        add("dawn", true),
+        expect![[r#"
+        at line 6
+        # The harbour
+        ~ start
+        Keeper: Another storm.
+        => END
+
+        ~ dawn
+        => END
+
+        ## Only at night.
+        ~ night
+        A gull cries.
+        # for the next one
+
+        ~ last
+        => END
+    "#]],
+    );
+    check(
+        LABELS,
+        11,
+        add("dawn", true),
+        expect![[r#"
+        at line 14
+        # The harbour
+        ~ start
+        Keeper: Another storm.
+        => END
+
+        ## Only at night.
+        ~ night
+        A gull cries.
+        # for the next one
+
+        ~ last
+        => END
+
+        ~ dawn
+        => END
+    "#]],
+    );
+    check(
+        LABELS,
+        1,
+        add("dawn", false),
+        expect![[r#"
+        at line 14
+        # The harbour
+        ~ start
+        Keeper: Another storm.
+        => END
+
+        ## Only at night.
+        ~ night
+        A gull cries.
+        # for the next one
+
+        ~ last
+        => END
+
+        ~ dawn
+        => END
+    "#]],
+    );
+    check(
+        "~ a\nA.",
+        1,
+        add("b", false),
+        expect![[r#"
+        at line 4
+        ~ a
+        A.
+
+        ~ b
+        => END
+    "#]],
+    );
+    check(
+        "",
+        1,
+        add("first", false),
+        expect![[r#"
+        at line 1
+        ~ first
+        => END
+    "#]],
+    );
+    check(
+        LABELS,
+        2,
+        add("night", true),
+        expect!["refused: there is a label `night` in this file already"],
+    );
+    check(
+        LABELS,
+        2,
+        add("2nd", true),
+        expect![
+            "refused: `2nd` cannot be a title: letters, digits and `_`, not starting with a digit"
+        ],
+    );
+    check(
+        LABELS,
+        3,
+        add("dawn", true),
+        expect!["refused: new labels go after a label's title"],
+    );
+}
+
+#[test]
+fn remove_labels() {
+    let remove = |from: Option<usize>| move |at| Edit::RemoveLabel { at, from };
+    check(
+        LABELS,
+        2,
+        remove(None),
+        expect![[r#"
+        at line 2
+        # The harbour
+        ## Only at night.
+        ~ night
+        A gull cries.
+        # for the next one
+
+        ~ last
+        => END
+    "#]],
+    );
+    // With its notes above the title.
+    check(
+        LABELS,
+        7,
+        remove(Some(line(LABELS, 6))),
+        expect![[r#"
+        at line 6
+        # The harbour
+        ~ start
+        Keeper: Another storm.
+        => END
+
+        # for the next one
+
+        ~ last
+        => END
+    "#]],
+    );
+    check(
+        LABELS,
+        11,
+        remove(None),
+        expect![[r#"
+        at line 10
+        # The harbour
+        ~ start
+        Keeper: Another storm.
+        => END
+
+        ## Only at night.
+        ~ night
+        A gull cries.
+        # for the next one
+    "#]],
+    );
+    check(
+        LABELS,
+        7,
+        remove(Some(line(LABELS, 3))),
+        expect!["refused: the label's notes are not right above its title"],
+    );
+    check(
+        LABELS,
+        3,
+        remove(None),
+        expect!["refused: no label's title starts there"],
+    );
 }

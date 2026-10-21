@@ -1,6 +1,7 @@
-//! dialogue-maker on GitHub: signing in (OAuth device flow), the repository a project's
-//! `origin` points at, pushing a branch, opening its pull request. The only part of
-//! dialogue-maker that uses the network, and only when the writer asks it to.
+//! dialogue-maker on GitHub: signing in (OAuth device flow), the writer's repositories,
+//! cloning one, the repository a project's `origin` points at, pushing a branch, opening
+//! its pull request. The only part of dialogue-maker that uses the network, and only when
+//! the writer asks it to.
 
 use std::fmt;
 use std::path::Path;
@@ -91,6 +92,18 @@ pub struct Account {
 pub struct Repo {
     pub owner: String,
     pub name: String,
+}
+
+/// A repository the signed-in account can push to, to choose one from.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+pub struct RepoInfo {
+    pub owner: String,
+    pub name: String,
+    pub private: bool,
+    pub description: Option<String>,
+    /// When it was last pushed to (ISO 8601).
+    pub pushed_at: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
@@ -241,6 +254,63 @@ impl GitHub {
         Ok(response.body_mut().read_json()?)
     }
 
+    /// The repositories the account can push to, last pushed first.
+    pub fn repositories(&self, token: &str) -> Result<Vec<RepoInfo>, GitHubError> {
+        #[derive(Deserialize)]
+        struct Owner {
+            login: String,
+        }
+        #[derive(Deserialize)]
+        struct Permissions {
+            push: bool,
+        }
+        #[derive(Deserialize)]
+        struct Found {
+            name: String,
+            owner: Owner,
+            private: bool,
+            description: Option<String>,
+            pushed_at: Option<String>,
+            permissions: Option<Permissions>,
+        }
+        const PAGE: usize = 100;
+        let mut out = Vec::new();
+        // Ten pages: a thousand repositories is plenty to choose from.
+        for page in 1..=10 {
+            let mut response = self.get(
+                token,
+                &format!("/user/repos?per_page={PAGE}&sort=pushed&page={page}"),
+            )?;
+            if response.status() == 401 {
+                return fail("the GitHub sign-in no longer works; sign in again");
+            }
+            if !response.status().is_success() {
+                return fail(format!(
+                    "GitHub would not list your repositories ({})",
+                    response.status()
+                ));
+            }
+            let found: Vec<Found> = response.body_mut().read_json()?;
+            let last = found.len() < PAGE;
+            out.extend(
+                found
+                    .into_iter()
+                    .filter(|r| r.permissions.as_ref().is_none_or(|p| p.push))
+                    .map(|r| RepoInfo {
+                        owner: r.owner.login,
+                        name: r.name,
+                        private: r.private,
+                        description: r.description.filter(|d| !d.trim().is_empty()),
+                        pushed_at: r.pushed_at,
+                    }),
+            );
+            if last {
+                break;
+            }
+        }
+        Ok(out)
+    }
+
     /// The branch pull requests go into by default.
     pub fn default_branch(&self, token: &str, repo: &Repo) -> Result<String, GitHubError> {
         #[derive(Deserialize)]
@@ -338,6 +408,11 @@ pub fn github_repo(url: &str) -> Option<Repo> {
     })
 }
 
+/// Whether the project is in a git repository.
+pub fn in_git(root: &Path) -> bool {
+    git2::Repository::discover(root).is_ok()
+}
+
 /// The project's `origin`: its URL, and the GitHub repository when it is one.
 pub fn origin(root: &Path) -> Result<Option<(String, Option<Repo>)>, GitHubError> {
     let repo = match git2::Repository::discover(root) {
@@ -352,7 +427,105 @@ pub fn origin(root: &Path) -> Result<Option<(String, Option<Repo>)>, GitHubError
     Ok(Some((url, github)))
 }
 
+/// The address a repository has on GitHub, as `origin`.
+pub fn repo_url(repo: &Repo) -> String {
+    format!("https://github.com/{}/{}.git", repo.owner, repo.name)
+}
+
+/// Point the project's repository at a GitHub repository, when it has no `origin` yet.
+pub fn link(root: &Path, repo: &Repo) -> Result<(), GitHubError> {
+    let repository = git2::Repository::discover(root)
+        .map_err(|_| GitHubError("the project is not in a git repository".into()))?;
+    if let Ok(origin) = repository.find_remote("origin") {
+        return fail(format!(
+            "the repository has an `origin` already ({})",
+            origin.url().unwrap_or_default()
+        ));
+    }
+    repository.remote("origin", &repo_url(repo))?;
+    Ok(())
+}
+
 impl GitHub {
+    /// Clone a repository into `into` (a folder that does not exist yet, or is empty), with
+    /// `origin` pointing at it on GitHub. `progress(received, total)` hears how the download
+    /// goes; returning false from it stops the clone. A stopped or failed clone leaves no
+    /// files behind.
+    pub fn clone_repo(
+        &self,
+        repo: &Repo,
+        into: &Path,
+        token: &str,
+        progress: &mut dyn FnMut(usize, usize) -> bool,
+    ) -> Result<(), GitHubError> {
+        let existed = into.exists();
+        if existed
+            && std::fs::read_dir(into)
+                .map(|mut d| d.next().is_some())
+                .unwrap_or(true)
+        {
+            return fail(format!(
+                "{} is not an empty folder: choose another place",
+                into.display()
+            ));
+        }
+        let url = format!("{}/{}/{}.git", self.git, repo.owner, repo.name);
+        let mut asked = false;
+        let mut stopped = false;
+        let result = {
+            let mut callbacks = git2::RemoteCallbacks::new();
+            callbacks.credentials(|_, _, _| {
+                if std::mem::replace(&mut asked, true) {
+                    return Err(git2::Error::from_str(
+                        "GitHub did not accept the sign-in: sign in again",
+                    ));
+                }
+                git2::Cred::userpass_plaintext("x-access-token", token)
+            });
+            callbacks.transfer_progress(|p| {
+                let go_on = progress(p.received_objects(), p.total_objects());
+                stopped |= !go_on;
+                go_on
+            });
+            let mut fetch = git2::FetchOptions::new();
+            fetch.remote_callbacks(callbacks);
+            git2::build::RepoBuilder::new()
+                .fetch_options(fetch)
+                .clone(&url, into)
+        };
+        let repository = match result {
+            Ok(repository) => repository,
+            Err(e) => {
+                // Nothing half-cloned stays.
+                if existed {
+                    if let Ok(entries) = std::fs::read_dir(into) {
+                        for entry in entries.flatten() {
+                            let path = entry.path();
+                            let _ = if path.is_dir() {
+                                std::fs::remove_dir_all(path)
+                            } else {
+                                std::fs::remove_file(path)
+                            };
+                        }
+                    }
+                } else {
+                    let _ = std::fs::remove_dir_all(into);
+                }
+                if stopped {
+                    return fail("clone stopped");
+                }
+                return fail(format!(
+                    "cannot clone {}/{}: {}",
+                    repo.owner,
+                    repo.name,
+                    e.message()
+                ));
+            }
+        };
+        repository.remote_set_url("origin", &repo_url(repo))?;
+        Ok(())
+    }
+
     /// Push a branch to `origin` (over HTTPS with the token when it is on GitHub, whatever
     /// address `origin` has). Only a fast-forward: never over commits on GitHub the writer
     /// does not have.

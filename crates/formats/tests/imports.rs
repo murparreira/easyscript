@@ -80,3 +80,11 @@ fn ink() {
     speakers.sort();
     assert_eq!(speakers, ["Bob", "Shopkeeper"]);
 }
+
+#[test]
+fn a_dialogue_file_comes_in_as_it_is() {
+    let text = "~ start\nKeeper: Hello.\n=> END\n";
+    let imported = dm_formats::import::import(dm_formats::import::Source::Dialogue, text);
+    assert_eq!(imported.text, text);
+    assert!(imported.warnings.is_empty());
+}

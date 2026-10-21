@@ -98,3 +98,22 @@ fn screenplay() {
         Language::PtBr,
     ));
 }
+
+#[test]
+fn dialogue_files_as_a_zip() {
+    use std::io::Read;
+    let (project, _) = ferry();
+    let bytes = dm_formats::export::archive::dialogue_zip(&project, &[]).unwrap();
+    let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes)).unwrap();
+    assert_eq!(zip.len(), project.files.len());
+    for file in &project.files {
+        let mut text = String::new();
+        zip.by_name(&file.path)
+            .unwrap()
+            .read_to_string(&mut text)
+            .unwrap();
+        assert_eq!(text, file.text, "{} as it is", file.path);
+    }
+    let none = dm_formats::export::archive::dialogue_zip(&project, &["elsewhere.dialogue".into()]);
+    assert!(none.is_err());
+}

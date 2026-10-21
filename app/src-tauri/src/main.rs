@@ -12,7 +12,7 @@ use dm_core::project_file::ConfigEdit;
 use dm_core::workspace::{FileDiff, Session};
 use dm_formats::export::{Format, Options as ExportOptions};
 use dm_formats::import::{Imported, Source};
-use dm_github::{Account, GitHub, PullRequest, Repo, SignIn};
+use dm_github::{Account, GitHub, PullRequest, Repo, RepoInfo, SignIn};
 use notify_debouncer_full::notify::{RecommendedWatcher, RecursiveMode};
 use notify_debouncer_full::{DebounceEventResult, Debouncer, RecommendedCache, new_debouncer};
 use serde::Serialize;
@@ -247,6 +247,8 @@ struct GitHubSession {
     /// A sign-in under way, and the flag that cancels it: each its own, so a sign-in
     /// cancelled and started again never finishes the old one.
     pending: Mutex<Option<(SignIn, Arc<AtomicBool>)>>,
+    /// Set to stop the clone under way.
+    stop_clone: Arc<AtomicBool>,
 }
 
 const KEYRING_SERVICE: &str = "dialogue-maker";
@@ -264,6 +266,7 @@ impl GitHubSession {
             token: Mutex::default(),
             account: Mutex::default(),
             pending: Mutex::default(),
+            stop_clone: Arc::default(),
         }
     }
 
@@ -293,9 +296,13 @@ impl GitHubSession {
     }
 }
 
-/// What the app knows about GitHub for the open project.
+/// What the app knows about GitHub for the open project (if one is open).
 #[derive(Serialize)]
 struct GitHubState {
+    /// The project is in a git repository.
+    git: bool,
+    /// Where `origin` points, when there is one.
+    origin: Option<String>,
     /// The repository `origin` points at, when it is on GitHub.
     repo: Option<Repo>,
     /// Who is signed in, when someone is.
@@ -307,11 +314,25 @@ async fn github_state(
     opened: State<'_, Opened>,
     github: State<'_, GitHubSession>,
 ) -> Result<GitHubState, String> {
-    let repo = with_workspace(&opened, |ws| {
-        dm_github::origin(ws.root()).map_err(|e| e.to_string())
-    })
-    .await?
-    .and_then(|(_, repo)| repo);
+    let root = opened
+        .0
+        .lock()
+        .map_err(|_| "unusable after an error")?
+        .as_ref()
+        .map(|open| open.workspace.root().to_owned());
+    let (git, origin) = match root {
+        Some(root) => tauri::async_runtime::spawn_blocking(move || {
+            let git = dm_github::in_git(&root);
+            (git, dm_github::origin(&root).ok().flatten())
+        })
+        .await
+        .map_err(|e| e.to_string())?,
+        None => (false, None),
+    };
+    let (origin, repo) = match origin {
+        Some((url, repo)) => (Some(url), repo),
+        None => (None, None),
+    };
     let known = github
         .account
         .lock()
@@ -342,7 +363,76 @@ async fn github_state(
         }
         (None, None) => None,
     };
-    Ok(GitHubState { repo, account })
+    Ok(GitHubState {
+        git,
+        origin,
+        repo,
+        account,
+    })
+}
+
+/// The signed-in account's repositories, to clone or link one.
+#[tauri::command]
+async fn github_repos(github: State<'_, GitHubSession>) -> Result<Vec<RepoInfo>, String> {
+    let token = github.token().ok_or("sign in to GitHub first")?;
+    let client = github.client.clone();
+    tauri::async_runtime::spawn_blocking(move || client.repositories(&token))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())
+}
+
+#[derive(Clone, Serialize)]
+struct CloneProgress {
+    received: usize,
+    total: usize,
+}
+
+/// Clone a repository into a new folder `name` inside `parent`; returns the folder, to open.
+/// Emits `clone-progress` as it downloads.
+#[tauri::command]
+async fn github_clone<R: Runtime>(
+    owner: String,
+    name: String,
+    parent: String,
+    app: AppHandle<R>,
+    github: State<'_, GitHubSession>,
+) -> Result<String, String> {
+    let token = github.token().unwrap_or_default();
+    let client = github.client.clone();
+    let stop = github.stop_clone.clone();
+    stop.store(false, Ordering::Relaxed);
+    let into = PathBuf::from(parent).join(&name);
+    tauri::async_runtime::spawn_blocking(move || {
+        let repo = Repo { owner, name };
+        let mut last = std::time::Instant::now() - Duration::from_secs(1);
+        client
+            .clone_repo(&repo, &into, &token, &mut |received, total| {
+                if last.elapsed() > Duration::from_millis(100) || received == total {
+                    last = std::time::Instant::now();
+                    let _ = app.emit("clone-progress", CloneProgress { received, total });
+                }
+                !stop.load(Ordering::Relaxed)
+            })
+            .map_err(|e| e.to_string())?;
+        Ok(into.to_string_lossy().into_owned())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+fn github_clone_stop(github: State<'_, GitHubSession>) {
+    github.stop_clone.store(true, Ordering::Relaxed);
+}
+
+/// Point the open project's repository (one with no `origin`) at a GitHub repository.
+#[tauri::command]
+async fn github_link(owner: String, name: String, opened: State<'_, Opened>) -> Result<(), String> {
+    with_workspace(&opened, move |ws| {
+        dm_github::link(ws.root(), &Repo { owner, name }).map_err(|e| e.to_string())
+    })
+    .await
 }
 
 /// Start signing in: the code to confirm on GitHub.
@@ -495,6 +585,21 @@ async fn export_script(
     .await
 }
 
+/// The project's dialogue files (those at `paths`, or all) as a ZIP at `path`, at their
+/// paths in the project, unsaved edits included.
+#[tauri::command]
+async fn export_dialogue_zip(
+    paths: Vec<String>,
+    path: String,
+    opened: State<'_, Opened>,
+) -> Result<(), String> {
+    with_workspace(&opened, move |ws| {
+        let bytes = dm_formats::export::archive::dialogue_zip(ws.project(), &paths)?;
+        std::fs::write(&path, bytes).map_err(|e| format!("{path}: {e}"))
+    })
+    .await
+}
+
 fn same_file(a: &Path, b: &Path) -> bool {
     let canonical = |p: &Path| p.canonicalize().unwrap_or_else(|_| p.to_owned());
     canonical(a) == canonical(b)
@@ -502,7 +607,7 @@ fn same_file(a: &Path, b: &Path) -> bool {
 
 fn read_import(path: &str) -> Result<Imported, String> {
     let source = Source::of(Path::new(path))
-        .ok_or_else(|| format!("{path}: not a .twee, .yarn or .ink file"))?;
+        .ok_or_else(|| format!("{path}: not a .twee, .yarn, .ink or .dialogue file"))?;
     let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
     Ok(dm_formats::import::import(source, &text))
 }
@@ -675,7 +780,12 @@ fn app<R: Runtime>(builder: Builder<R>, github: GitHubSession) -> Builder<R> {
             github_sign_in_cancel,
             github_sign_out,
             github_pull_request,
+            github_repos,
+            github_clone,
+            github_clone_stop,
+            github_link,
             export_script,
+            export_dialogue_zip,
             import_preview,
             import_write,
             startup_project
@@ -923,7 +1033,12 @@ mod tests {
         let state = call(&webview, "github_state", no_args.clone()).unwrap();
         assert_eq!(
             state,
-            serde_json::json!({ "repo": { "owner": "team", "name": "game" }, "account": null })
+            serde_json::json!({
+                "git": true,
+                "origin": "git@github.com:team/game.git",
+                "repo": { "owner": "team", "name": "game" },
+                "account": null
+            })
         );
         let refused = call(&webview, "github_pull_request", pull_request.clone()).unwrap_err();
         assert_eq!(refused, "sign in to GitHub first");
@@ -1044,6 +1159,22 @@ mod tests {
         assert_eq!(
             std::fs::read_to_string(root.join("dialogue/a.dialogue")).unwrap(),
             "~ a\nKeeper: One.\n=> END\n"
+        );
+
+        // The dialogue files themselves, as a ZIP, with the edits.
+        let zip = dir.path().join("files.zip");
+        call(
+            &webview,
+            "export_dialogue_zip",
+            serde_json::json!({ "paths": [], "path": zip }),
+        )
+        .unwrap();
+        let bytes = std::fs::read(&zip).unwrap();
+        assert!(bytes.starts_with(b"PK"), "a ZIP");
+        assert!(
+            bytes
+                .windows("dialogue/a.dialogue".len())
+                .any(|w| w == b"dialogue/a.dialogue")
         );
 
         // Imports: a look first, then a new file in the project.

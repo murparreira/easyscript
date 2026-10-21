@@ -46,7 +46,7 @@ enum Command {
         editing: bool,
     },
     /// Write the script in another format: JSON for other tools, a translation table, voice
-    /// scripts, a screenplay.
+    /// scripts, a screenplay; or the dialogue files themselves as a ZIP.
     Export {
         /// What to write.
         format: ExportFormat,
@@ -70,7 +70,8 @@ enum Command {
         language: dm_formats::export::Language,
     },
     /// Convert a Twine (`.twee`), Yarn Spinner (`.yarn`) or Ink (`.ink`) script into a
-    /// Dialogue Manager file. What does not convert is kept as comments, and listed.
+    /// Dialogue Manager file (a `.dialogue` file is copied). What does not convert is kept
+    /// as comments, and listed.
     Import {
         /// The script to convert.
         file: PathBuf,
@@ -115,6 +116,8 @@ enum ExportFormat {
     VoiceCsv,
     /// A screenplay, in Fountain.
     Fountain,
+    /// The dialogue files themselves, as a ZIP at their paths in the project (needs -o).
+    Zip,
 }
 
 impl From<ExportFormat> for dm_formats::export::Format {
@@ -126,6 +129,7 @@ impl From<ExportFormat> for dm_formats::export::Format {
             ExportFormat::Voice => Format::Voice,
             ExportFormat::VoiceCsv => Format::VoiceCsv,
             ExportFormat::Fountain => Format::Fountain,
+            ExportFormat::Zip => unreachable!("written apart: it is not text"),
         }
     }
 }
@@ -239,6 +243,20 @@ fn main() -> ExitCode {
                 Ok(p) => p,
                 Err(code) => return code,
             };
+            if let ExportFormat::Zip = format {
+                let Some(output) = output else {
+                    eprintln!("dialogue-maker: a ZIP goes to a file: give it with -o");
+                    return ExitCode::from(2);
+                };
+                let written = dm_formats::export::archive::dialogue_zip(&project, &[])
+                    .and_then(|bytes| std::fs::write(&output, bytes).map_err(|e| e.to_string()));
+                if let Err(e) = written {
+                    eprintln!("dialogue-maker: {}: {e}", output.display());
+                    return ExitCode::from(2);
+                }
+                eprintln!("wrote {}", output.display());
+                return ExitCode::SUCCESS;
+            }
             let script = dm_core::lower(&project);
             let existing = output
                 .as_ref()
@@ -277,7 +295,7 @@ fn main() -> ExitCode {
         Command::Import { file, output } => {
             let Some(source) = dm_formats::import::Source::of(&file) else {
                 eprintln!(
-                    "dialogue-maker: {}: not a .twee, .yarn or .ink file",
+                    "dialogue-maker: {}: not a .twee, .yarn, .ink or .dialogue file",
                     file.display()
                 );
                 return ExitCode::from(2);

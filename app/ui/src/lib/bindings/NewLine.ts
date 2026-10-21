@@ -13,4 +13,8 @@ tags: Array<NewTag>,
 /**
  * For a choice: the condition that shows it.
  */
-condition: string | null, };
+condition: string | null, 
+/**
+ * Where it goes next (`=> title`); with no text and no choice, the line is only that.
+ */
+jump: string | null, };

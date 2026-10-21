@@ -90,12 +90,14 @@
           op: "insert_line",
           at,
           after: target.mode === "after",
+          under: false,
           line: {
             choice: target.choice,
             speaker: speaker.trim() || null,
             text: words,
             tags: Object.entries(tags).map(([name, value]) => ({ name, value })),
             condition: target.choice ? condition.trim() || null : null,
+            jump: null,
           },
         },
       ];

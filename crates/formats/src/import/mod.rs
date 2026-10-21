@@ -1,6 +1,7 @@
 //! Other tools' scripts as Dialogue Manager files: Twine's Twee, Yarn Spinner, Ink. Each
 //! converts what has a match in Dialogue Manager and keeps the rest as comments, with a
-//! warning naming the line, so nothing is dropped without a word.
+//! warning naming the line, so nothing is dropped without a word. A Dialogue Manager file
+//! comes in as it is.
 //!
 //! The result is a new file's text; writing it is the caller's (never over a file that
 //! exists).
@@ -27,6 +28,8 @@ pub enum Source {
     Yarn,
     /// Ink (`.ink`).
     Ink,
+    /// A Dialogue Manager file from elsewhere (`.dialogue`), as it is.
+    Dialogue,
 }
 
 impl Source {
@@ -37,6 +40,7 @@ impl Source {
             "twee" | "tw" | "tw3" => Some(Source::Twee),
             "yarn" => Some(Source::Yarn),
             "ink" => Some(Source::Ink),
+            "dialogue" => Some(Source::Dialogue),
             _ => None,
         }
     }
@@ -66,6 +70,22 @@ pub fn import(source: Source, text: &str) -> Imported {
         Source::Twee => twee::convert(text),
         Source::Yarn => yarn::convert(text),
         Source::Ink => ink::convert(text),
+        Source::Dialogue => Imported {
+            text: text.to_owned(),
+            warnings: dm_syntax::parse(text)
+                .errors()
+                .map(|token| Warning {
+                    line: text[..usize::from(token.text_range().start())]
+                        .matches('\n')
+                        .count()
+                        + 1,
+                    message: format!(
+                        "`{}` does not read as Dialogue Manager: kept as it is",
+                        token.text().trim()
+                    ),
+                })
+                .collect(),
+        },
     }
 }
 

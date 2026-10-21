@@ -226,6 +226,20 @@ impl Workspace {
             .project
             .file_index(path)
             .ok_or_else(|| EditError(format!("{path} is not one of the dialogue files")))?;
+        // Titles are unique in the whole project: a jump names one without its file.
+        for edit in edits {
+            if let Edit::AddLabel { id, .. } = edit
+                && let Some(other) = self.project.files.iter().find(|f| {
+                    f.path != path && edit::titles(&f.text).contains(&id.trim().to_owned())
+                })
+            {
+                return Err(EditError(format!(
+                    "there is a label `{}` in {} already",
+                    id.trim(),
+                    other.path
+                )));
+            }
+        }
         let before = self.project.files[index].text.clone();
         let mut text = before.clone();
         let mut at = 0;

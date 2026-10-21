@@ -3,4 +3,4 @@
 /**
  * The formats there are importers for.
  */
-export type ImportSource = "twee" | "yarn" | "ink";
+export type ImportSource = "twee" | "yarn" | "ink" | "dialogue";

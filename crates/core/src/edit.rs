@@ -48,10 +48,13 @@ pub enum Edit {
         at: usize,
         condition: Option<String>,
     },
-    /// A new line before or after another, at its indentation.
+    /// A new line before or after another, at its indentation; or, `under` it, as the
+    /// last line nested under a choice, an `if`, `elif`, `else`, `when` or `while`.
     InsertLine {
         at: usize,
         after: bool,
+        #[serde(default)]
+        under: bool,
         line: NewLine,
     },
     /// A line, the lines nested under it, and the comments right above it.
@@ -63,6 +66,24 @@ pub enum Edit {
     MoveLine {
         at: usize,
         up: bool,
+    },
+    /// Where a line or choice goes next (`=> title`, `=> END`, `=> END!`); none removes
+    /// its jump.
+    SetJump {
+        at: usize,
+        target: Option<String>,
+    },
+    /// A new label, `~ id`, that ends the conversation until lines are added: after the
+    /// label whose title starts at `at`, or at the end of the file.
+    AddLabel {
+        at: Option<usize>,
+        id: String,
+    },
+    /// A label: its title and its lines; and its notes, from `from` (where the comments
+    /// the model gives the label start) when it has some above its title.
+    RemoveLabel {
+        at: usize,
+        from: Option<usize>,
     },
 }
 
@@ -79,6 +100,9 @@ pub struct NewLine {
     /// For a choice: the condition that shows it.
     #[serde(default)]
     pub condition: Option<String>,
+    /// Where it goes next (`=> title`); with no text and no choice, the line is only that.
+    #[serde(default)]
+    pub jump: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, TS)]
@@ -122,9 +146,21 @@ pub fn apply(text: &str, edit: &Edit) -> Result<Applied, EditError> {
         Edit::SetCondition { at, condition } => {
             set_condition(text, &root, *at, condition.as_deref())
         }
-        Edit::InsertLine { at, after, line } => {
-            // The line first, then its tags and condition, each checked as its own edit.
-            let mut applied = insert_line(text, &root, *at, *after, line)?;
+        Edit::InsertLine {
+            at,
+            after,
+            under,
+            line,
+        } => {
+            // The line first, then its tags, condition and jump, each checked as its own edit.
+            let mut applied = if *under {
+                insert_under(text, &root, *at, line)?
+            } else {
+                insert_line(text, &root, *at, *after, line)?
+            };
+            if line.text.trim().is_empty() && !line.choice && line.jump.is_some() {
+                return Ok(applied);
+            }
             for tag in &line.tags {
                 let root = dm_syntax::parse(&applied.text).syntax();
                 applied = set_tag(
@@ -140,10 +176,17 @@ pub fn apply(text: &str, edit: &Edit) -> Result<Applied, EditError> {
                 applied =
                     set_condition(&applied.text, &root, applied.at, line.condition.as_deref())?;
             }
+            if line.jump.is_some() {
+                let root = dm_syntax::parse(&applied.text).syntax();
+                applied = set_jump(&applied.text, &root, applied.at, line.jump.as_deref())?;
+            }
             Ok(applied)
         }
         Edit::RemoveLine { at } => remove_line(text, &root, *at),
         Edit::MoveLine { at, up } => move_line(text, &root, *at, *up),
+        Edit::SetJump { at, target } => set_jump(text, &root, *at, target.as_deref()),
+        Edit::AddLabel { at, id } => add_label(text, &root, *at, id),
+        Edit::RemoveLabel { at, from } => remove_label(text, &root, *at, *from),
     }
 }
 
@@ -472,6 +515,67 @@ fn insert_line(
 ) -> Result<Applied, EditError> {
     let line = line_at(root, at)?;
     let indent = first_token(&line, INDENT).unwrap_or_default();
+    let pos = if after { end(&line) } else { unit_start(&line) };
+    insert_at(text, root, pos, &indent, new, None)
+}
+
+/// A new line nested under a choice or a condition, after the lines there.
+fn insert_under(
+    text: &str,
+    root: &SyntaxNode,
+    at: usize,
+    new: &NewLine,
+) -> Result<Applied, EditError> {
+    let owner = line_at(root, at)?;
+    if !matches!(
+        owner.kind(),
+        RESPONSE_LINE | CONDITION_LINE | WHEN_LINE | WHILE_LINE
+    ) {
+        return fail("lines go under a choice or a condition only");
+    }
+    let nested = first_child(&owner, BLOCK).and_then(|block| {
+        block
+            .children()
+            .filter(|n| n.kind().is_line() && !is_trivia(n.kind()))
+            .last()
+    });
+    let indent = match &nested {
+        Some(last) => first_token(last, INDENT).unwrap_or_default(),
+        None => format!(
+            "{}{}",
+            first_token(&owner, INDENT).unwrap_or_default(),
+            indent_unit(root)
+        ),
+    };
+    let pos = nested.as_ref().map_or_else(|| end(&owner), end);
+    insert_at(text, root, pos, &indent, new, Some(at))
+}
+
+/// The indentation a file nests lines with: a tab, or its narrowest run of spaces.
+fn indent_unit(root: &SyntaxNode) -> String {
+    let indents: Vec<String> = root
+        .descendants_with_tokens()
+        .filter_map(SyntaxElement::into_token)
+        .filter(|t| t.kind() == INDENT && !t.text().is_empty())
+        .map(|t| t.text().to_owned())
+        .collect();
+    if indents.is_empty() || indents.iter().any(|i| i.starts_with('\t')) {
+        return "\t".into();
+    }
+    let narrowest = indents.iter().map(String::len).min().unwrap_or(4);
+    " ".repeat(narrowest)
+}
+
+/// Write a new line at `pos` (the start of a line, or the end of the file) with `indent`;
+/// under the line starting at `parent` when there is one.
+fn insert_at(
+    text: &str,
+    root: &SyntaxNode,
+    pos: usize,
+    indent: &str,
+    new: &NewLine,
+    parent: Option<usize>,
+) -> Result<Applied, EditError> {
     let newline = newline_of(root);
     let speaker = new
         .speaker
@@ -480,6 +584,26 @@ fn insert_line(
         .filter(|s| !s.is_empty());
     if speaker.is_some_and(|s| s.contains(':') || s.contains(['[', ']', '#', '\n', '\r'])) {
         return fail("a speaker's name cannot have `:`, `[`, `]`, `#` or a line break");
+    }
+    // A line that only jumps.
+    if !new.choice && new.text.trim().is_empty() {
+        let Some(target) = new.jump.as_deref() else {
+            return fail("a line needs some words");
+        };
+        let target = jump_target(target)?;
+        let content = format!("{indent}=> {target}");
+        return place(
+            text,
+            pos,
+            &content,
+            newline,
+            |inserted, _| {
+                inserted.kind == GOTO_LINE
+                    && inserted.jump.as_deref() == Some(&*format!("=> {target}"))
+            },
+            parent,
+        )
+        .map_err(|_| EditError("the jump does not read back as written".into()));
     }
     let narration = !new.choice && speaker.is_none();
     let words = escape_words(&new.text, narration)?;
@@ -494,25 +618,14 @@ fn insert_line(
         format!("{indent}{dash}{name}{words}")
     };
     let attempt = |words: &str| {
-        let content = content(words);
-        let (out, new_at) = if after {
-            let at = end(&line);
-            if text[..at].ends_with('\n') {
-                (splice(text, at..at, &format!("{content}{newline}")), at)
-            } else {
-                // The last line, with no newline after it: the file keeps ending without one.
-                (
-                    splice(text, at..at, &format!("{newline}{content}")),
-                    at + newline.len(),
-                )
-            }
-        } else {
-            let at = unit_start(&line);
-            (splice(text, at..at, &format!("{content}{newline}")), at)
-        };
-        checked(&out, new_at, |inserted| {
-            inserted.kind == kind && inserted.speaker.as_deref() == speaker
-        })
+        place(
+            text,
+            pos,
+            &content(words),
+            newline,
+            |inserted, _| inserted.kind == kind && inserted.speaker.as_deref() == speaker,
+            parent,
+        )
     };
     match attempt(&words) {
         Ok(applied) => Ok(applied),
@@ -520,6 +633,297 @@ fn insert_line(
         Err(e) => Err(e),
     }
     .map_err(|_| EditError("the new line does not read back as written".into()))
+}
+
+/// Put `content` as a line at `pos` and check it; under `parent` when given.
+fn place(
+    text: &str,
+    pos: usize,
+    content: &str,
+    newline: &str,
+    ok: impl Fn(&Summary, &SyntaxNode) -> bool,
+    parent: Option<usize>,
+) -> Result<Applied, EditError> {
+    let (out, at) = if pos == 0 || text[..pos].ends_with('\n') {
+        (splice(text, pos..pos, &format!("{content}{newline}")), pos)
+    } else {
+        // The last line, with no newline after it: the file keeps ending without one.
+        (
+            splice(text, pos..pos, &format!("{newline}{content}")),
+            pos + newline.len(),
+        )
+    };
+    let root = dm_syntax::parse(&out).syntax();
+    let line = line_at(&root, at)?;
+    let under = |line: &SyntaxNode| {
+        line.parent()
+            .filter(|b| b.kind() == BLOCK)
+            .and_then(|b| b.parent())
+            .map(|owner| start(&owner))
+    };
+    if ok(&Summary::of(&line), &line) && parent.is_none_or(|p| under(&line) == Some(p)) {
+        Ok(Applied { text: out, at })
+    } else {
+        fail("the new line does not read back as written")
+    }
+}
+
+/// A jump's target as written after `=>`: a title, `END` or `END!`.
+fn jump_target(target: &str) -> Result<&str, EditError> {
+    let target = target.trim();
+    if target == "END" || target == "END!" || is_title(target) {
+        Ok(target)
+    } else {
+        fail(format!("`{target}` is not a title to go to"))
+    }
+}
+
+/// A title Dialogue Manager accepts: letters, digits and `_`, not starting with a digit.
+pub fn is_title(id: &str) -> bool {
+    id.chars()
+        .next()
+        .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
+        && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+}
+
+fn set_jump(
+    text: &str,
+    root: &SyntaxNode,
+    at: usize,
+    target: Option<&str>,
+) -> Result<Applied, EditError> {
+    let line = line_at(root, at)?;
+    let target = target.map(str::trim).filter(|t| !t.is_empty());
+    if line.kind() == GOTO_LINE {
+        let Some(target) = target else {
+            return fail("this line only jumps; remove the line instead");
+        };
+        let target = jump_target(target)?;
+        let Some(jump) = first_child(&line, JUMP) else {
+            return fail("this line has no jump to change");
+        };
+        let written = format!("=> {target}");
+        return checked(&splice(text, range_of(&jump), &written), at, |after| {
+            after.jump.as_deref() == Some(&*written)
+        })
+        .map_err(|_| EditError(format!("`{written}` does not read back as a jump")));
+    }
+    let line = text_line_at(root, at)?;
+    let before = Summary::of(&line);
+    let target = target.map(jump_target).transpose()?;
+    let written = target.map(|t| format!("=> {t}"));
+    let same = |after: &Summary| {
+        after.jump == written
+            && Summary {
+                jump: before.jump.clone(),
+                ..after.clone()
+            } == before
+    };
+    let jump = line.children().find(|n| n.kind() == JUMP);
+    let attempts: Vec<(Range<usize>, String)> = match (&jump, &written) {
+        (Some(jump), Some(written)) => vec![(range_of(jump), written.clone())],
+        (Some(jump), None) => {
+            let from = match jump.prev_sibling_or_token() {
+                Some(previous) if previous.kind() == WHITESPACE => element_range(&previous).start,
+                _ => start(jump),
+            };
+            vec![(from..end(jump), String::new())]
+        }
+        (None, Some(written)) => {
+            let mut places = Vec::new();
+            if line.kind() == RESPONSE_LINE
+                && let Some(condition) = trailing_condition(&line)
+            {
+                places.push(start(&condition));
+            }
+            places.push(content_end(&line));
+            let words = words_range(&line);
+            places.push(words.end);
+            places
+                .into_iter()
+                .map(|at| {
+                    let spaced = if text[..at].ends_with([' ', '\t']) {
+                        format!("{written} ")
+                    } else {
+                        format!(" {written}")
+                    };
+                    (at..at, spaced)
+                })
+                .collect()
+        }
+        (None, None) => {
+            return Ok(Applied {
+                text: text.to_owned(),
+                at,
+            });
+        }
+    };
+    for (range, with) in attempts {
+        if let Ok(applied) = checked(&splice(text, range, &with), at, same) {
+            return Ok(applied);
+        }
+    }
+    fail(match written {
+        Some(written) => format!("`{written}` does not read back as this line's jump"),
+        None => "removing the jump would change more of the line".into(),
+    })
+}
+
+fn add_label(
+    text: &str,
+    root: &SyntaxNode,
+    at: Option<usize>,
+    id: &str,
+) -> Result<Applied, EditError> {
+    let id = id.trim();
+    if !is_title(id) {
+        return fail(format!(
+            "`{id}` cannot be a title: letters, digits and `_`, not starting with a digit"
+        ));
+    }
+    let titles: Vec<SyntaxNode> = root.children().filter(|n| n.kind() == TITLE_LINE).collect();
+    if titles.iter().any(|t| title_name(t).as_deref() == Some(id)) {
+        return fail(format!("there is a label `{id}` in this file already"));
+    }
+    let newline = newline_of(root);
+    let content = format!("~ {id}{newline}=> END{newline}");
+    let next = match at {
+        Some(at) => {
+            let title = line_at(root, at)?;
+            if title.kind() != TITLE_LINE || title.parent().as_ref() != Some(root) {
+                return fail("new labels go after a label's title");
+            }
+            titles.iter().find(|t| start(t) > at).cloned()
+        }
+        None => None,
+    };
+    let (out, new_at) = match next {
+        // Before the next label and the comments above it, with a blank line after.
+        Some(next) => {
+            let pos = unit_start(&next);
+            (splice(text, pos..pos, &format!("{content}{newline}")), pos)
+        }
+        // At the end, after a blank line.
+        None => {
+            let mut lead = String::new();
+            if !text.is_empty() && !text.ends_with('\n') {
+                lead.push_str(newline);
+            }
+            let ended = format!("{text}{lead}");
+            if !ended.is_empty()
+                && !ended.ends_with(&format!("{newline}{newline}"))
+                && ended != newline
+            {
+                lead.push_str(newline);
+            }
+            let pos = text.len() + lead.len();
+            (format!("{text}{lead}{content}"), pos)
+        }
+    };
+    let new_root = dm_syntax::parse(&out).syntax();
+    let title = line_at(&new_root, new_at)?;
+    if title.kind() == TITLE_LINE && title_name(&title).as_deref() == Some(id) {
+        Ok(Applied {
+            text: out,
+            at: new_at,
+        })
+    } else {
+        fail("the new label does not read back as written")
+    }
+}
+
+/// The labels a file has, by title.
+pub fn titles(text: &str) -> Vec<String> {
+    dm_syntax::parse(text)
+        .syntax()
+        .children()
+        .filter(|n| n.kind() == TITLE_LINE)
+        .filter_map(|t| title_name(&t))
+        .collect()
+}
+
+fn title_name(title: &SyntaxNode) -> Option<String> {
+    ast::TitleLine::cast(title.clone())?
+        .name()
+        .map(|t| t.text().to_owned())
+}
+
+fn remove_label(
+    text: &str,
+    root: &SyntaxNode,
+    at: usize,
+    from: Option<usize>,
+) -> Result<Applied, EditError> {
+    let title = line_at(root, at)?;
+    if title.kind() != TITLE_LINE || title.parent().as_ref() != Some(root) {
+        return fail("no label's title starts there");
+    }
+    let lines: Vec<SyntaxNode> = root.children().filter(|n| n.kind().is_line()).collect();
+    let index = lines
+        .iter()
+        .position(|l| *l == title)
+        .expect("a line of the file");
+    // Its lines: up to the next title, without the comments and blanks at the end (they
+    // are about the next label).
+    let next = lines[index + 1..]
+        .iter()
+        .position(|l| l.kind() == TITLE_LINE)
+        .map_or(lines.len(), |i| index + 1 + i);
+    let last = lines[index..next]
+        .iter()
+        .rposition(|l| !is_trivia(l.kind()))
+        .map(|i| index + i)
+        .expect("the title itself");
+    let mut range = start(&title)..end(&lines[last]);
+    if let Some(from) = from {
+        // Only whole comment and blank lines between the notes and the title.
+        let above = lines[..index]
+            .iter()
+            .rev()
+            .take_while(|l| start(l) >= from)
+            .collect::<Vec<_>>();
+        if from > at
+            || above.iter().any(|l| !is_trivia(l.kind()))
+            || above.last().is_none_or(|l| start(l) != from)
+        {
+            return fail("the label's notes are not right above its title");
+        }
+        range.start = from;
+    }
+    // The blank lines that separated it go too, on one side.
+    let after_blank = lines[last + 1..next]
+        .iter()
+        .take_while(|l| l.kind() == BLANK_LINE)
+        .last()
+        .map(end);
+    if lines[last + 1..].iter().all(|l| l.kind() == BLANK_LINE) {
+        // The last thing in the file: the blanks before it go, and the file still ends with
+        // a newline.
+        let before = lines[..index]
+            .iter()
+            .rev()
+            .skip_while(|l| start(l) >= range.start)
+            .take_while(|l| l.kind() == BLANK_LINE)
+            .last()
+            .map(start);
+        if let Some(before) = before {
+            range.start = before;
+        }
+        let mut out = text[..range.start].to_owned();
+        if !out.is_empty() && !out.ends_with('\n') {
+            out.push_str(newline_of(root));
+        }
+        let at = range.start.min(out.len());
+        return Ok(Applied { text: out, at });
+    }
+    if let Some(blank_end) = after_blank {
+        range.end = blank_end;
+    }
+    let out = splice(text, range.clone(), "");
+    Ok(Applied {
+        text: out,
+        at: range.start,
+    })
 }
 
 fn remove_line(text: &str, root: &SyntaxNode, at: usize) -> Result<Applied, EditError> {
@@ -888,6 +1292,9 @@ impl Summary {
                 summary.jump = r.jump().map(|j| j.syntax().text().to_string());
                 summary.id = r.static_id().map(|i| i.syntax().text().to_string());
                 summary.condition = r.condition().and_then(|c| expr(c.expr()));
+            }
+            Some(AstLine::Goto(g)) => {
+                summary.jump = g.jump().map(|j| j.syntax().text().to_string())
             }
             Some(AstLine::Condition(c)) => summary.condition = expr(c.expr()),
             Some(AstLine::While(w)) => summary.condition = expr(w.expr()),

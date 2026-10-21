@@ -261,3 +261,123 @@ fn push_fast_forwards_only() {
     let error = GitHub::default().push(&root, "rewrite", "tok").unwrap_err();
     assert!(error.0.contains("commits you do not have"), "{error}");
 }
+
+#[test]
+fn list_repositories_the_account_can_push_to() {
+    let (base, seen) = fake(|_, path, _| {
+        if path.ends_with("&page=1") {
+            let mut repos: Vec<String> = (0..100)
+                .map(|i| {
+                    format!(
+                        r#"{{"name":"r{i}","owner":{{"login":"team"}},"private":true,"description":"","pushed_at":null,"permissions":{{"push":{}}}}}"#,
+                        i != 3
+                    )
+                })
+                .collect();
+            repos[0] = r#"{"name":"game","owner":{"login":"team"},"private":false,"description":"The game","pushed_at":"2026-10-19T10:00:00Z","permissions":{"push":true}}"#.into();
+            (200, format!("[{}]", repos.join(",")))
+        } else {
+            (
+                200,
+                r#"[{"name":"last","owner":{"login":"writer"},"private":false,"description":null,"pushed_at":null}]"#
+                    .into(),
+            )
+        }
+    });
+    let repos = GitHub::new(&base, &base).repositories("tok").unwrap();
+    assert_eq!(repos.len(), 100, "99 of the first page, one of the second");
+    assert_eq!(repos[0].name, "game");
+    assert_eq!(repos[0].description.as_deref(), Some("The game"));
+    assert!(
+        repos.iter().all(|r| r.name != "r3"),
+        "read-only ones are left out"
+    );
+    assert_eq!(repos.last().unwrap().owner, "writer");
+    assert!(
+        repos[1].description.is_none(),
+        "an empty description is none"
+    );
+    assert_eq!(seen.lock().unwrap().len(), 2);
+}
+
+#[test]
+fn clone_and_link() {
+    use git2::{Repository, Signature};
+    let dir = tempfile::tempdir().unwrap();
+    let hub = dir.path().join("hub");
+    let bare = Repository::init_bare(hub.join("team/game.git")).unwrap();
+    let sig = Signature::now("Writer", "w@example.com").unwrap();
+    let blob = bare.blob(b"~ start\nHi.\n").unwrap();
+    let mut tree = bare.treebuilder(None).unwrap();
+    tree.insert("a.dialogue", blob, 0o100644).unwrap();
+    let tree = bare.find_tree(tree.write().unwrap()).unwrap();
+    bare.commit(Some("refs/heads/main"), &sig, &sig, "first", &tree, &[])
+        .unwrap();
+    bare.set_head("refs/heads/main").unwrap();
+
+    let mut github = GitHub::default();
+    // Over file://, so the clone reports its progress as a download does.
+    github.git = format!("file://{}", hub.to_str().unwrap());
+    let repo = Repo {
+        owner: "team".into(),
+        name: "game".into(),
+    };
+    let into = dir.path().join("work/game");
+    let mut calls = 0;
+    github
+        .clone_repo(&repo, &into, "tok", &mut |_, _| {
+            calls += 1;
+            true
+        })
+        .unwrap();
+    assert_eq!(
+        std::fs::read_to_string(into.join("a.dialogue")).unwrap(),
+        "~ start\nHi.\n"
+    );
+    let (url, on_github) = dm_github::origin(&into).unwrap().unwrap();
+    assert_eq!(url, "https://github.com/team/game.git");
+    assert_eq!(on_github, Some(repo.clone()));
+
+    // Not over files that are there.
+    let error = github
+        .clone_repo(&repo, &into, "tok", &mut |_, _| true)
+        .unwrap_err();
+    assert!(error.0.contains("not an empty folder"), "{error}");
+
+    assert!(calls > 0, "progress is reported");
+
+    // Stopped, or failed: nothing stays.
+    let other = dir.path().join("stopped");
+    let error = github
+        .clone_repo(&repo, &other, "tok", &mut |_, _| false)
+        .unwrap_err();
+    assert_eq!(error.0, "clone stopped");
+    assert!(!other.exists());
+    let missing = Repo {
+        owner: "team".into(),
+        name: "missing".into(),
+    };
+    std::fs::create_dir(&other).unwrap();
+    let error = github
+        .clone_repo(&missing, &other, "tok", &mut |_, _| true)
+        .unwrap_err();
+    assert!(error.0.starts_with("cannot clone team/missing"), "{error}");
+    assert!(other.exists() && std::fs::read_dir(&other).unwrap().next().is_none());
+
+    // Linking: only a repository with no origin.
+    let error = dm_github::link(&into, &repo).unwrap_err();
+    assert!(error.0.contains("has an `origin` already"), "{error}");
+    let plain = dir.path().join("plain");
+    Repository::init(&plain).unwrap();
+    dm_github::link(&plain, &repo).unwrap();
+    assert_eq!(dm_github::origin(&plain).unwrap().unwrap().1, Some(repo));
+    let error = dm_github::link(
+        dir.path(),
+        &Repo {
+            owner: "a".into(),
+            name: "b".into(),
+        },
+    )
+    .unwrap_err();
+    assert!(error.0.contains("not in a git repository"), "{error}");
+}
