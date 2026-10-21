@@ -388,8 +388,11 @@ fn clone_and_link() {
             true
         })
         .unwrap();
+    // Line endings as the machine's git settings say (`core.autocrlf` on Windows).
     assert_eq!(
-        std::fs::read_to_string(into.join("a.dialogue")).unwrap(),
+        std::fs::read_to_string(into.join("a.dialogue"))
+            .unwrap()
+            .replace("\r\n", "\n"),
         "~ start\nHi.\n"
     );
     let (url, on_github) = dm_github::origin(&into).unwrap().unwrap();
