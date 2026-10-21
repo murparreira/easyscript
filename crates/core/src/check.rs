@@ -29,7 +29,11 @@ pub struct Diagnostic {
     pub severity: Severity,
     /// A short stable name for the kind of problem (`unknown-jump-target`).
     pub code: &'static str,
+    /// In English.
     pub message: String,
+    /// The values the message names, by name (`speaker`, `count`...), so a view can say it
+    /// in another language. Which names each code has: see `app/ui/src/lib/diagnostics.ts`.
+    pub args: BTreeMap<String, String>,
     pub location: Option<Location>,
 }
 
@@ -124,12 +128,14 @@ impl Checker<'_> {
         severity: Severity,
         code: &'static str,
         message: String,
+        args: Args,
         location: Option<Location>,
     ) {
         self.out.push(Diagnostic {
             severity,
             code,
             message,
+            args: args.into_iter().map(|(k, v)| (k.to_owned(), v)).collect(),
             location,
         });
     }
@@ -145,6 +151,7 @@ impl Checker<'_> {
                 Severity::Error,
                 "unreadable-file",
                 format!("cannot read this file ({why}); it is left alone"),
+                vec![("why", why.clone())],
                 location,
             );
         }
@@ -162,6 +169,7 @@ impl Checker<'_> {
                     Severity::Error,
                     "syntax",
                     format!("cannot read `{}`", token.text()),
+                    vec![("text", token.text().to_owned())],
                     self.at(span),
                 );
             }
@@ -180,6 +188,7 @@ impl Checker<'_> {
                         Severity::Error,
                         "duplicate-label",
                         format!("`{}` is already a title in this file", name.text()),
+                        vec![("label", name.text().to_owned())],
                         self.at(span),
                     );
                 }
@@ -232,6 +241,7 @@ impl Checker<'_> {
                 Severity::Error,
                 "unknown-jump-target",
                 message,
+                vec![("label", name)],
                 self.at(span),
             );
         }
@@ -253,7 +263,14 @@ impl Checker<'_> {
         });
         for (speaker, (span, count)) in unknown {
             let message = format!("speaker `{speaker}` is no character's ({})", lines(count));
-            self.push(Severity::Warning, "unknown-speaker", message, self.at(span));
+            let args = vec![("speaker", speaker), ("count", count.to_string())];
+            self.push(
+                Severity::Warning,
+                "unknown-speaker",
+                message,
+                args,
+                self.at(span),
+            );
         }
     }
 
@@ -267,6 +284,10 @@ impl Checker<'_> {
                     Severity::Error,
                     "missing-portrait",
                     message,
+                    vec![
+                        ("character", character.id.clone()),
+                        ("path", portrait.clone()),
+                    ],
                     self.in_config(portrait),
                 );
             }
@@ -304,7 +325,18 @@ impl Checker<'_> {
         });
         for ((id, mood), (span, count)) in missing {
             let message = format!("{id} has no `{mood}` voice recorded ({})", lines(count));
-            self.push(Severity::Warning, "missing-voice", message, self.at(span));
+            let args = vec![
+                ("character", id),
+                ("mood", mood),
+                ("count", count.to_string()),
+            ];
+            self.push(
+                Severity::Warning,
+                "missing-voice",
+                message,
+                args,
+                self.at(span),
+            );
         }
     }
 
@@ -324,19 +356,34 @@ impl Checker<'_> {
                 };
                 let value = tag.value.as_deref();
                 let problem = match (spec.kind, value) {
-                    (TagKind::Flag, Some(v)) => {
-                        Some(format!("`{}` takes no value, has `{v}`", tag.name))
-                    }
-                    (TagKind::Enum | TagKind::Asset | TagKind::Text, None) => {
-                        Some(format!("`{}` needs a value", tag.name))
-                    }
-                    (TagKind::Enum, Some(v)) if !spec.values.iter().any(|x| x == v) => {
-                        Some(format!(
+                    (TagKind::Flag, Some(v)) => Some((
+                        format!("`{}` takes no value, has `{v}`", tag.name),
+                        vec![
+                            ("problem", "has-value".to_owned()),
+                            ("tag", tag.name.clone()),
+                            ("value", (*v).to_owned()),
+                        ],
+                    )),
+                    (TagKind::Enum | TagKind::Asset | TagKind::Text, None) => Some((
+                        format!("`{}` needs a value", tag.name),
+                        vec![
+                            ("problem", "needs-value".to_owned()),
+                            ("tag", tag.name.clone()),
+                        ],
+                    )),
+                    (TagKind::Enum, Some(v)) if !spec.values.iter().any(|x| x == v) => Some((
+                        format!(
                             "`{v}` is not one of {}'s values ({})",
                             tag.name,
                             spec.values.join(", ")
-                        ))
-                    }
+                        ),
+                        vec![
+                            ("problem", "not-a-value".to_owned()),
+                            ("tag", tag.name.clone()),
+                            ("value", (*v).to_owned()),
+                            ("values", spec.values.join(", ")),
+                        ],
+                    )),
                     (TagKind::Asset, Some(v)) => {
                         let path = spec
                             .path
@@ -350,8 +397,8 @@ impl Checker<'_> {
                     }
                     _ => None,
                 };
-                if let Some(message) = problem {
-                    bad.push((message, tag.span));
+                if let Some((message, args)) = problem {
+                    bad.push((message, args, tag.span));
                 }
             }
         });
@@ -360,17 +407,25 @@ impl Checker<'_> {
                 Severity::Warning,
                 "unknown-tag",
                 format!("tag `{name}` is not in the project file ({})", lines(count)),
+                vec![("tag", name), ("count", count.to_string())],
                 self.at(span),
             );
         }
-        for (message, span) in bad {
-            self.push(Severity::Warning, "bad-tag-value", message, self.at(span));
+        for (message, args, span) in bad {
+            self.push(
+                Severity::Warning,
+                "bad-tag-value",
+                message,
+                args,
+                self.at(span),
+            );
         }
         for (path, (span, count)) in missing {
             self.push(
                 Severity::Error,
                 "missing-asset",
                 format!("`{path}` does not exist ({})", lines(count)),
+                vec![("path", path), ("count", count.to_string())],
                 self.at(span),
             );
         }
@@ -411,6 +466,7 @@ impl Checker<'_> {
                 Severity::Warning,
                 "unreachable-label",
                 message,
+                vec![("label", id)],
                 self.at(span),
             );
         }
@@ -437,6 +493,7 @@ impl Checker<'_> {
                         Severity::Error,
                         "unknown-place-file",
                         message,
+                        vec![("place", place.id.clone()), ("path", path.clone())],
                         self.in_config(path),
                     );
                 }
@@ -455,6 +512,7 @@ impl Checker<'_> {
                         Severity::Warning,
                         "unknown-place-label",
                         message,
+                        vec![("place", place.id.clone()), ("label", label.clone())],
                         self.in_config(label),
                     );
                 }
@@ -474,6 +532,7 @@ impl Checker<'_> {
                     Severity::Error,
                     "missing-document",
                     message,
+                    vec![("path", document.path.clone())],
                     self.in_config(&document.path),
                 );
                 continue;
@@ -488,12 +547,16 @@ impl Checker<'_> {
                     Severity::Error,
                     "broken-link",
                     format!("no label `{}`", target.as_str()),
+                    vec![("label", target.as_str().to_owned())],
                     Some(location),
                 );
             }
         }
     }
 }
+
+/// A diagnostic's values, by name.
+type Args = Vec<(&'static str, String)>;
 
 /// Line and column of a byte offset in `text`.
 fn location(path: String, text: &str, offset: usize) -> Location {

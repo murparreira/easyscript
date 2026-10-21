@@ -6,4 +6,13 @@ export type Diagnostic = { severity: Severity,
 /**
  * A short stable name for the kind of problem (`unknown-jump-target`).
  */
-code: string, message: string, location: Location | null, };
+code: string, 
+/**
+ * In English.
+ */
+message: string, 
+/**
+ * The values the message names, by name (`speaker`, `count`...), so a view can say it
+ * in another language. Which names each code has: see `app/ui/src/lib/diagnostics.ts`.
+ */
+args: { [key in string]: string }, location: Location | null, };

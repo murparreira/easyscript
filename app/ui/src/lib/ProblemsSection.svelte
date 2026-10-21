@@ -1,5 +1,6 @@
 <script lang="ts">
   // What `dialogue-maker check` reports, where it is.
+  import { describe } from "./diagnostics";
   import { t } from "./i18n.svelte";
   import { useReader } from "./reader.svelte";
 
@@ -15,7 +16,7 @@
         <li class={p.severity}>
           <span class="sev">{p.severity === "error" ? t("error") : t("warning")}</span>
           {#if p.location}<code class="loc">{p.location.path}:{p.location.line}</code>{/if}
-          <span>{p.message}</span>
+          <span>{describe(p)}</span>
           <span class="tid">{p.code}</span>
         </li>
       {/each}
