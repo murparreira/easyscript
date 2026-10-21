@@ -1295,7 +1295,7 @@ dependencies = [
 
 [[package]]
 name = "es-app"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "es-core",
  "es-formats",
@@ -1315,7 +1315,7 @@ dependencies = [
 
 [[package]]
 name = "es-cli"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "clap",
  "es-core",
@@ -1325,7 +1325,7 @@ dependencies = [
 
 [[package]]
 name = "es-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "base64 0.23.1",
  "diffy",
@@ -1348,7 +1348,7 @@ dependencies = [
 
 [[package]]
 name = "es-formats"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "csv",
  "es-core",
@@ -1365,7 +1365,7 @@ dependencies = [
 
 [[package]]
 name = "es-github"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "git2",
  "serde",
@@ -1377,7 +1377,7 @@ dependencies = [
 
 [[package]]
 name = "es-syntax"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "expect-test",
  "proptest",
