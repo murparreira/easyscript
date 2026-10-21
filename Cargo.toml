@@ -11,6 +11,7 @@ publish = false
 [workspace.dependencies]
 dm-syntax = { path = "crates/dm-syntax" }
 dm-core = { path = "crates/core" }
+dm-github = { path = "crates/github" }
 
 [workspace.lints.rust]
 unsafe_code = "deny"

@@ -5,6 +5,7 @@
   import type { GitStatus } from "./bindings/GitStatus";
   import type { Session } from "./bindings/Session";
   import { useEditor } from "./editor.svelte";
+  import GitHubControls from "./GitHubControls.svelte";
 
   const editor = useEditor()!;
   let status: GitStatus | null = $state(null);
@@ -89,6 +90,7 @@
     {#if status.conflicts.length > 0}
       <span class="error">Conflicts to resolve in git (not here): {status.conflicts.join(", ")}</span>
     {/if}
+    <GitHubControls head={status.head} />
     {#if note}<span class="tid">{note}</span>{/if}
     {#if error && !committing}<span class="error">{error}</span>{/if}
   </div>

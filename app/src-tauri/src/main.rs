@@ -10,9 +10,11 @@ use dm_core::edit::Edit;
 use dm_core::git::{self, GitStatus};
 use dm_core::project_file::ConfigEdit;
 use dm_core::workspace::{FileDiff, Session};
+use dm_github::{Account, GitHub, PullRequest, Repo, SignIn};
 use notify_debouncer_full::notify::{RecommendedWatcher, RecursiveMode};
 use notify_debouncer_full::{DebounceEventResult, Debouncer, RecommendedCache, new_debouncer};
 use serde::Serialize;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{AppHandle, Builder, Emitter, Manager, Runtime, State};
 
 /// The open project (its working copies and edits), and the watcher that follows its files.
@@ -232,6 +234,233 @@ async fn git_branch(
     .await
 }
 
+/// The GitHub sign-in: the token (in the system's password store when there is one, else
+/// only in memory for this session), who it signs in as, and a sign-in under way.
+struct GitHubSession {
+    client: GitHub,
+    /// Keep the token in the system's password store (the tests keep it in memory).
+    keep: bool,
+    token: Mutex<Option<String>>,
+    account: Mutex<Option<Account>>,
+    /// A sign-in under way, and the flag that cancels it: each its own, so a sign-in
+    /// cancelled and started again never finishes the old one.
+    pending: Mutex<Option<(SignIn, Arc<AtomicBool>)>>,
+}
+
+const KEYRING_SERVICE: &str = "dialogue-maker";
+const KEYRING_USER: &str = "github";
+
+fn keyring_entry() -> Option<keyring::Entry> {
+    keyring::Entry::new(KEYRING_SERVICE, KEYRING_USER).ok()
+}
+
+impl GitHubSession {
+    fn new(client: GitHub, keep: bool) -> Self {
+        Self {
+            client,
+            keep,
+            token: Mutex::default(),
+            account: Mutex::default(),
+            pending: Mutex::default(),
+        }
+    }
+
+    fn store(&self) -> Option<keyring::Entry> {
+        self.keep.then(keyring_entry).flatten()
+    }
+
+    /// The token: in memory, or read from the password store.
+    fn token(&self) -> Option<String> {
+        let mut token = self.token.lock().ok()?;
+        if token.is_none() {
+            *token = self.store().and_then(|e| e.get_password().ok());
+        }
+        token.clone()
+    }
+
+    fn forget(&self) {
+        if let Ok(mut token) = self.token.lock() {
+            *token = None;
+        }
+        if let Ok(mut account) = self.account.lock() {
+            *account = None;
+        }
+        if let Some(entry) = self.store() {
+            let _ = entry.delete_credential();
+        }
+    }
+}
+
+/// What the app knows about GitHub for the open project.
+#[derive(Serialize)]
+struct GitHubState {
+    /// The repository `origin` points at, when it is on GitHub.
+    repo: Option<Repo>,
+    /// Who is signed in, when someone is.
+    account: Option<Account>,
+}
+
+#[tauri::command]
+async fn github_state(
+    opened: State<'_, Opened>,
+    github: State<'_, GitHubSession>,
+) -> Result<GitHubState, String> {
+    let repo = with_workspace(&opened, |ws| {
+        dm_github::origin(ws.root()).map_err(|e| e.to_string())
+    })
+    .await?
+    .and_then(|(_, repo)| repo);
+    let known = github
+        .account
+        .lock()
+        .map_err(|_| "unusable after an error")?
+        .clone();
+    let account = match (known, github.token()) {
+        (Some(account), _) => Some(account),
+        (None, Some(token)) => {
+            let client = github.client.clone();
+            let answer = tauri::async_runtime::spawn_blocking(move || client.account(&token))
+                .await
+                .map_err(|e| e.to_string())?;
+            match answer {
+                Ok(account) => {
+                    *github
+                        .account
+                        .lock()
+                        .map_err(|_| "unusable after an error")? = Some(account.clone());
+                    Some(account)
+                }
+                Err(e) if e.0.contains("sign in again") => {
+                    github.forget();
+                    None
+                }
+                // Offline: say nothing about the account rather than fail.
+                Err(_) => None,
+            }
+        }
+        (None, None) => None,
+    };
+    Ok(GitHubState { repo, account })
+}
+
+/// Start signing in: the code to confirm on GitHub.
+#[tauri::command]
+async fn github_sign_in_start(github: State<'_, GitHubSession>) -> Result<SignIn, String> {
+    let client = github.client.clone();
+    let sign_in = tauri::async_runtime::spawn_blocking(move || client.start_sign_in())
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())?;
+    let mut pending = github
+        .pending
+        .lock()
+        .map_err(|_| "unusable after an error")?;
+    if let Some((_, cancel)) = pending.take() {
+        cancel.store(true, Ordering::Relaxed);
+    }
+    *pending = Some((sign_in.clone(), Arc::default()));
+    Ok(sign_in)
+}
+
+/// Wait for the code to be confirmed; keep the token, and say who signed in.
+#[tauri::command]
+async fn github_sign_in_finish(github: State<'_, GitHubSession>) -> Result<Account, String> {
+    let (sign_in, cancel) = github
+        .pending
+        .lock()
+        .map_err(|_| "unusable after an error")?
+        .clone()
+        .ok_or("no sign-in under way")?;
+    let mine = cancel.clone();
+    let client = github.client.clone();
+    let (token, account) = tauri::async_runtime::spawn_blocking(move || {
+        let token = client.finish_sign_in(&sign_in, &cancel)?;
+        let account = client.account(&token)?;
+        Ok::<_, dm_github::GitHubError>((token, account))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())?;
+    if let Some(entry) = github.store() {
+        // Without a password store the sign-in lasts until the app closes.
+        let _ = entry.set_password(&token);
+    }
+    *github.token.lock().map_err(|_| "unusable after an error")? = Some(token);
+    *github
+        .account
+        .lock()
+        .map_err(|_| "unusable after an error")? = Some(account.clone());
+    let mut pending = github
+        .pending
+        .lock()
+        .map_err(|_| "unusable after an error")?;
+    if pending.as_ref().is_some_and(|(_, c)| Arc::ptr_eq(c, &mine)) {
+        *pending = None;
+    }
+    Ok(account)
+}
+
+#[tauri::command]
+fn github_sign_in_cancel(github: State<'_, GitHubSession>) {
+    if let Some((_, cancel)) = github.pending.lock().ok().and_then(|mut p| p.take()) {
+        cancel.store(true, Ordering::Relaxed);
+    }
+}
+
+#[tauri::command]
+fn github_sign_out(github: State<'_, GitHubSession>) {
+    github.forget();
+}
+
+/// Push the branch and open its pull request (or find the one open). Refused with unsaved
+/// edits, with project files not committed, and on the default branch.
+#[tauri::command]
+async fn github_pull_request(
+    title: String,
+    body: String,
+    opened: State<'_, Opened>,
+    github: State<'_, GitHubSession>,
+) -> Result<PullRequest, String> {
+    let token = github.token().ok_or("sign in to GitHub first")?;
+    let (root, branch) = with_workspace(&opened, |ws| {
+        if !ws.state().changed.is_empty() {
+            return Err("save your edits and commit them first".to_owned());
+        }
+        let status = git::status(ws.root(), &ws.owned_paths())
+            .map_err(|e| e.to_string())?
+            .ok_or("the project is not in a git repository")?;
+        if !status.files.is_empty() {
+            return Err("commit your changes first: a pull request takes commits".to_owned());
+        }
+        let branch = status.branch.ok_or("check out a branch first")?;
+        Ok((ws.root().to_owned(), branch))
+    })
+    .await?;
+    let client = github.client.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let (_, repo) = dm_github::origin(&root)?
+            .ok_or_else(|| dm_github::GitHubError("the repository has no `origin`".into()))?;
+        let repo =
+            repo.ok_or_else(|| dm_github::GitHubError("`origin` is not on GitHub".into()))?;
+        let base = client.default_branch(&token, &repo)?;
+        if branch == base {
+            return Err(dm_github::GitHubError(format!(
+                "you are on {base}, where pull requests go: make a branch for your changes first"
+            )));
+        }
+        client.push(&root, &branch, &token)?;
+        let title = if title.trim().is_empty() {
+            branch.clone()
+        } else {
+            title
+        };
+        client.pull_request(&token, &repo, &branch, &base, &title, &body)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())
+}
+
 /// A project folder given on the command line (`dm-app path/to/game`), if any.
 #[tauri::command]
 fn startup_project() -> Option<String> {
@@ -298,16 +527,22 @@ fn main() {
     #[cfg(target_os = "linux")]
     avoid_nvidia_dmabuf_crash();
 
-    app(Builder::default())
-        .run(tauri::generate_context!())
-        .expect("error while running dialogue-maker");
+    app(
+        Builder::default(),
+        GitHubSession::new(GitHub::default(), true),
+    )
+    .run(tauri::generate_context!())
+    .expect("error while running dialogue-maker");
 }
 
-/// The app's plugins, state and commands, on any runtime (the tests use a mock one).
-fn app<R: Runtime>(builder: Builder<R>) -> Builder<R> {
+/// The app's plugins, state and commands, on any runtime (the tests use a mock one, and a
+/// fake GitHub).
+fn app<R: Runtime>(builder: Builder<R>, github: GitHubSession) -> Builder<R> {
     builder
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .manage(Opened::default())
+        .manage(github)
         .invoke_handler(tauri::generate_handler![
             open_project,
             reload,
@@ -322,6 +557,12 @@ fn app<R: Runtime>(builder: Builder<R>) -> Builder<R> {
             git_status,
             git_commit,
             git_branch,
+            github_state,
+            github_sign_in_start,
+            github_sign_in_finish,
+            github_sign_in_cancel,
+            github_sign_out,
+            github_pull_request,
             startup_project
         ])
 }
@@ -373,9 +614,12 @@ mod tests {
         let file = dir.path().join("a.dialogue");
         std::fs::write(&file, "~ a\nKeeper: One.\n").unwrap();
 
-        let app = app(tauri::test::mock_builder())
-            .build(tauri::test::mock_context(tauri::test::noop_assets()))
-            .unwrap();
+        let app = app(
+            tauri::test::mock_builder(),
+            GitHubSession::new(GitHub::default(), false),
+        )
+        .build(tauri::test::mock_context(tauri::test::noop_assets()))
+        .unwrap();
         let webview = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
             .build()
             .unwrap();
@@ -458,5 +702,172 @@ mod tests {
             error.as_str().unwrap().contains("no line starts"),
             "{error}"
         );
+    }
+
+    /// A fake GitHub on localhost: the sign-in confirmed at the first poll, `team/game`
+    /// with `main`, and pull requests opened as #7.
+    fn fake_github() -> String {
+        use std::io::{BufRead, BufReader, Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let base = format!("http://{}", listener.local_addr().unwrap());
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let mut stream = stream.unwrap();
+                let mut reader = BufReader::new(stream.try_clone().unwrap());
+                let mut first = String::new();
+                reader.read_line(&mut first).unwrap();
+                let mut length = 0;
+                loop {
+                    let mut header = String::new();
+                    reader.read_line(&mut header).unwrap();
+                    if header.trim().is_empty() {
+                        break;
+                    }
+                    if let Some(v) = header.to_lowercase().strip_prefix("content-length:") {
+                        length = v.trim().parse().unwrap();
+                    }
+                }
+                reader.read_exact(&mut vec![0; length]).unwrap();
+                let mut parts = first.split_whitespace();
+                let (method, path) = (parts.next().unwrap(), parts.next().unwrap());
+                let (status, json) = match (method, path) {
+                    ("POST", "/login/device/code") => (
+                        200,
+                        r#"{"device_code":"dev","user_code":"ABCD-1234","verification_uri":"https://github.com/login/device","expires_in":60,"interval":1}"#,
+                    ),
+                    ("POST", "/login/oauth/access_token") => {
+                        (200, r#"{"access_token":"tok","token_type":"bearer"}"#)
+                    }
+                    ("GET", "/user") => (200, r#"{"login":"writer","name":null}"#),
+                    ("GET", "/repos/team/game") => (200, r#"{"default_branch":"main"}"#),
+                    ("GET", p) if p.starts_with("/repos/team/game/pulls?") => (200, "[]"),
+                    ("POST", "/repos/team/game/pulls") => (
+                        201,
+                        r#"{"number":7,"html_url":"https://github.com/team/game/pull/7"}"#,
+                    ),
+                    _ => (404, r#"{"message":"Not Found"}"#),
+                };
+                let reply = format!(
+                    "HTTP/1.1 {status} OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{json}",
+                    json.len()
+                );
+                stream.write_all(reply.as_bytes()).unwrap();
+            }
+        });
+        base
+    }
+
+    #[test]
+    fn sign_in_and_open_a_pull_request_through_the_commands() {
+        let dir = tempfile::tempdir().unwrap();
+        let hub = dir.path().join("hub");
+        let origin = git2::Repository::init_bare(hub.join("team/game.git")).unwrap();
+        let work = dir.path().join("work");
+        let repo = git2::Repository::init_opts(
+            &work,
+            git2::RepositoryInitOptions::new().initial_head("main"),
+        )
+        .unwrap();
+        let mut config = repo.config().unwrap();
+        config.set_str("user.name", "Writer").unwrap();
+        config.set_str("user.email", "writer@example.com").unwrap();
+        repo.remote("origin", "git@github.com:team/game.git")
+            .unwrap();
+        std::fs::write(work.join("a.dialogue"), "~ a\nKeeper: One.\n").unwrap();
+
+        let base = fake_github();
+        let mut client = GitHub::new(&base, &base);
+        client.git = hub.to_str().unwrap().to_owned();
+        let app = app(
+            tauri::test::mock_builder(),
+            GitHubSession::new(client, false),
+        )
+        .build(tauri::test::mock_context(tauri::test::noop_assets()))
+        .unwrap();
+        let webview = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
+            .build()
+            .unwrap();
+        let no_args = serde_json::json!({});
+        let pull_request = serde_json::json!({ "title": "Rewrite", "body": "" });
+        let session = call(
+            &webview,
+            "open_project",
+            serde_json::json!({ "path": work }),
+        )
+        .unwrap();
+        let at = session["view"]["script"]["files"][0]["sections"][0]["labels"][0]["body"][0]
+            ["span"]["start"]
+            .clone();
+        call(
+            &webview,
+            "git_commit",
+            serde_json::json!({ "paths": ["a.dialogue"], "message": "One" }),
+        )
+        .unwrap();
+
+        let state = call(&webview, "github_state", no_args.clone()).unwrap();
+        assert_eq!(
+            state,
+            serde_json::json!({ "repo": { "owner": "team", "name": "game" }, "account": null })
+        );
+        let refused = call(&webview, "github_pull_request", pull_request.clone()).unwrap_err();
+        assert_eq!(refused, "sign in to GitHub first");
+
+        let sign_in = call(&webview, "github_sign_in_start", no_args.clone()).unwrap();
+        assert_eq!(sign_in["user_code"], "ABCD-1234");
+        assert!(sign_in.get("device_code").is_none(), "kept in the app");
+        let account = call(&webview, "github_sign_in_finish", no_args.clone()).unwrap();
+        assert_eq!(account["login"], "writer");
+        let state = call(&webview, "github_state", no_args.clone()).unwrap();
+        assert_eq!(state["account"]["login"], "writer");
+
+        // Pull requests come from a branch, with everything saved and committed.
+        let refused = call(&webview, "github_pull_request", pull_request.clone()).unwrap_err();
+        assert!(
+            refused.as_str().unwrap().contains("you are on main"),
+            "{refused}"
+        );
+        call(
+            &webview,
+            "git_branch",
+            serde_json::json!({ "name": "rewrite", "create": true }),
+        )
+        .unwrap();
+        call(&webview, "edit", serde_json::json!({ "path": "a.dialogue", "edits": [{ "op": "set_text", "at": at, "text": "Uno." }] })).unwrap();
+        let refused = call(&webview, "github_pull_request", pull_request.clone()).unwrap_err();
+        assert!(
+            refused.as_str().unwrap().starts_with("save your edits"),
+            "{refused}"
+        );
+        call(&webview, "save", no_args.clone()).unwrap();
+        let refused = call(&webview, "github_pull_request", pull_request.clone()).unwrap_err();
+        assert!(
+            refused.as_str().unwrap().starts_with("commit your changes"),
+            "{refused}"
+        );
+        call(
+            &webview,
+            "git_commit",
+            serde_json::json!({ "paths": ["a.dialogue"], "message": "Uno" }),
+        )
+        .unwrap();
+
+        let opened = call(&webview, "github_pull_request", pull_request).unwrap();
+        assert_eq!(
+            opened,
+            serde_json::json!({ "number": 7, "url": "https://github.com/team/game/pull/7", "created": true })
+        );
+        assert_eq!(
+            origin
+                .find_reference("refs/heads/rewrite")
+                .unwrap()
+                .target(),
+            repo.head().unwrap().target(),
+            "pushed"
+        );
+
+        call(&webview, "github_sign_out", no_args.clone()).unwrap();
+        let state = call(&webview, "github_state", no_args).unwrap();
+        assert_eq!(state["account"], serde_json::Value::Null);
     }
 }

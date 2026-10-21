@@ -1,0 +1,20 @@
+[package]
+name = "dm-github"
+description = "dialogue-maker on GitHub: sign-in, push, pull requests"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+git2 = { version = "0.21.0", features = ["vendored-libgit2", "https", "vendored-openssl"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+ts-rs = "12.0.1"
+ureq = { version = "3.4.2", features = ["json"] }
+
+[dev-dependencies]
+tempfile = "3.27.0"

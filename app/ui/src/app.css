@@ -1797,3 +1797,26 @@ table.grid {
   display: grid;
   gap: 12px;
 }
+
+.gh {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-left: 8px;
+}
+
+.sign-in {
+  width: min(520px, 100%);
+}
+
+.user-code {
+  font: 700 2rem var(--mono);
+  letter-spacing: 0.12em;
+  text-align: center;
+  margin: 8px 0;
+}
+
+.commit-form textarea {
+  font: 0.95rem var(--ui);
+}
