@@ -14,6 +14,7 @@
   import { armSides, conditionSide, exprPieces } from "../model";
   import Notes from "../Notes.svelte";
   import { useReader } from "../reader.svelte";
+  import AddCondition from "./AddCondition.svelte";
   import JumpPill from "./JumpPill.svelte";
   import StepLine from "./StepLine.svelte";
   import Steps from "./Steps.svelte";
@@ -32,6 +33,10 @@
   }
   const opened = (span: Span, mode: "edit" | "before" | "after" | "under") => editor.target !== null && editor.is(span.file, span.start, mode);
   const add = (span: Span, choice: boolean) => (editor.target = { file: span.file, at: span.start, mode: "under", choice });
+
+  // A new arm for a branch: `elif` before its `else` (or after its last arm), `else` after
+  // its last arm. By where the branch starts.
+  let arming: { branch: number; keyword: "elif" | "else" } | null = $state(null);
 </script>
 
 {#snippet condition(span: Span, text: string | null, keyword: string)}
@@ -58,37 +63,35 @@
       <div class="w-menu-head">{t("The player chooses")}</div>
       {#each node.choices as choice, j (j)}
         {@const side = conditionSide(choice.condition, reader.view.variants)}
-        {#if !reader.hides(side)}
-          <div class="w-choice">
-            <Notes notes={choice.notes} kind="w-note" />
-            {#if opened(choice.span, "before")}<LineEditor target={editor.target!} />{/if}
-            {#if opened(choice.span, "edit")}
-              <LineEditor target={editor.target!} speaker={choice.speaker} words={choice.words} tags={choice.tags} condition={choice.condition} jump={choice.jump} />
-            {:else}
-              <div class="w-choice-row" class:marked={choice.marks.length > 0}>
-                <button type="button" class="w-choice-text" onclick={() => (editor.target = { file: choice.span.file, at: choice.span.start, mode: "edit", choice: true })}>
-                  <span class="arrow" aria-hidden="true">▸</span>
-                  {#if choice.speaker}<span class="who-inline">{choice.speaker}:</span>{/if}
-                  {choice.words.replace(/\\n/g, " ").replace(/\\([[\]:#])/g, "$1")}
-                </button>
-                <div class="w-choice-meta">
-                  {#if side}<span class="chip variant" class:yes={side.side}>{side.side ? side.variant.if_true : side.variant.if_false}</span>
-                  {:else if choice.condition}<span class="when">{t("only if")}</span> <Expr expr={choice.condition} />{/if}
-                  <Marks marks={choice.marks} />
-                  {#if choice.jump}<JumpPill jump={choice.jump} />{/if}
-                </div>
-                <Tools span={choice.span} choice={true} nested={!choice.jump} />
+        <div class="w-choice">
+          <Notes notes={choice.notes} kind="w-note" />
+          {#if opened(choice.span, "before")}<LineEditor target={editor.target!} />{/if}
+          {#if opened(choice.span, "edit")}
+            <LineEditor target={editor.target!} speaker={choice.speaker} words={choice.words} tags={choice.tags} condition={choice.condition} jump={choice.jump} />
+          {:else}
+            <div class="w-choice-row" class:marked={choice.marks.length > 0}>
+              <button type="button" class="w-choice-text" onclick={() => (editor.target = { file: choice.span.file, at: choice.span.start, mode: "edit", choice: true })}>
+                <span class="arrow" aria-hidden="true">▸</span>
+                {#if choice.speaker}<span class="who-inline">{choice.speaker}:</span>{/if}
+                {choice.words.replace(/\\n/g, " ").replace(/\\([[\]:#])/g, "$1")}
+              </button>
+              <div class="w-choice-meta">
+                {#if side}<span class="chip variant" class:yes={side.side}>{side.side ? side.variant.if_true : side.variant.if_false}</span>
+                {:else if choice.condition}<span class="when">{t("only if")}</span> <Expr expr={choice.condition} />{/if}
+                <Marks marks={choice.marks} />
+                {#if choice.jump}<JumpPill jump={choice.jump} />{/if}
               </div>
-            {/if}
-            {#if choice.body.length > 0 || opened(choice.span, "under")}
-              <div class="w-nest">
-                <Steps nodes={choice.body} />
-                {#if opened(choice.span, "under")}<LineEditor target={editor.target!} />{/if}
-              </div>
-            {/if}
-            {#if opened(choice.span, "after")}<LineEditor target={editor.target!} />{/if}
-          </div>
-        {/if}
+              <Tools span={choice.span} choice={true} nested={!choice.jump} />
+            </div>
+          {/if}
+          {#if choice.body.length > 0 || opened(choice.span, "under")}
+            <div class="w-nest">
+              <Steps nodes={choice.body} />
+              {#if opened(choice.span, "under")}<LineEditor target={editor.target!} />{/if}
+            </div>
+          {/if}
+          {#if opened(choice.span, "after")}<LineEditor target={editor.target!} />{/if}
+        </div>
       {/each}
       <div class="w-menu-foot">
         <button type="button" class="btn small" onclick={() => { const c = node.choices[node.choices.length - 1]; editor.target = { file: c.span.file, at: c.span.start, mode: "after", choice: true }; }}>{t("+ Choice")}</button>
@@ -98,31 +101,45 @@
     {@const sides = armSides(node.arms, reader.view.variants)}
     <div class="w-cond">
       {#each node.arms as arm, j (j)}
-        {#if !reader.hides(sides[j])}
-          <div class="w-arm">
-            <Notes notes={arm.notes} kind="w-note" />
-            <div class="w-arm-head">
-              {#if sides[j]}
-                {@const side = sides[j]!}
-                <span class="chip variant" class:yes={side.side}>{side.side ? side.variant.if_true : side.variant.if_false}</span>
-              {:else if arm.keyword === "else"}
-                <span class="kw">{t("Otherwise")}</span>
-              {:else}
-                {@render condition(arm.span, arm.condition, arm.keyword === "elif" ? t("Or if") : t("If"))}
-              {/if}
-              <Marks marks={arm.marks} />
-              <span class="grow"></span>
-              <button type="button" class="btn small" onclick={() => add(arm.span, false)}>{t("+ Line")}</button>
-            </div>
-            <div class="w-nest">
-              {#if arm.body.length > 0}<Steps nodes={arm.body} />{:else}<p class="nothing">{t("nothing")}</p>{/if}
-              {#if opened(arm.span, "under")}<LineEditor target={editor.target!} />{/if}
-            </div>
+        <div class="w-arm">
+          <Notes notes={arm.notes} kind="w-note" />
+          <div class="w-arm-head">
+            {#if sides[j]}
+              {@const side = sides[j]!}
+              <span class="chip variant" class:yes={side.side}>{side.side ? side.variant.if_true : side.variant.if_false}</span>
+            {:else if arm.keyword === "else"}
+              <span class="kw">{t("Otherwise")}</span>
+            {:else}
+              {@render condition(arm.span, arm.condition, arm.keyword === "elif" ? t("Or if") : t("If"))}
+            {/if}
+            <Marks marks={arm.marks} />
+            <span class="grow"></span>
+            <button type="button" class="btn small" onclick={() => add(arm.span, false)}>{t("+ Line")}</button>
           </div>
-        {/if}
+          <div class="w-nest">
+            {#if arm.body.length > 0}<Steps nodes={arm.body} />{:else}<p class="nothing">{t("nothing")}</p>{/if}
+            {#if opened(arm.span, "under")}<LineEditor target={editor.target!} />{/if}
+          </div>
+        </div>
       {/each}
     </div>
-    {#if opened(node.arms[node.arms.length - 1].span, "after")}<LineEditor target={editor.target!} />{/if}
+    {@const last = node.arms[node.arms.length - 1]}
+    {@const otherwise = last.keyword === "else" ? last : null}
+    {#if arming?.branch === node.span.start}
+      <AddCondition
+        file={node.span.file}
+        at={arming.keyword === "elif" && otherwise ? otherwise.span.start : last.span.start}
+        mode={arming.keyword === "elif" && otherwise ? "before" : "after"}
+        keyword={arming.keyword}
+        done={() => (arming = null)}
+      />
+    {:else}
+      <div class="w-cond-foot">
+        <button type="button" class="btn small" onclick={() => (arming = { branch: node.span.start, keyword: "elif" })}>{t("+ Or if…")}</button>
+        {#if !otherwise}<button type="button" class="btn small" onclick={() => (arming = { branch: node.span.start, keyword: "else" })}>{t("+ Otherwise")}</button>{/if}
+      </div>
+    {/if}
+    {#if opened(last.span, "after")}<LineEditor target={editor.target!} />{/if}
   {:else if node.type === "match"}
     {@const flags = reader.view.flag_functions.match_subjects.includes(node.subject)}
     <div class="w-cond">

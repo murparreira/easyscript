@@ -1,10 +1,10 @@
 <script lang="ts">
-  // The app's settings: its language and look, what the script shows, the project open.
+  // The app's settings: its language and look, what the script shows.
   import Dialog from "./Dialog.svelte";
   import { LANGUAGES, locale, t } from "./i18n.svelte";
   import { type Theme, useReader } from "./reader.svelte";
 
-  let { close, path = null, openOther }: { close: () => void; path?: string | null; openOther?: () => void } = $props();
+  let { close }: { close: () => void } = $props();
   const reader = useReader();
   const themes: { id: Theme; name: () => string }[] = [
     { id: "system", name: () => t("Like the system") },
@@ -34,13 +34,5 @@
       <label class="tog"><input type="checkbox" bind:checked={reader.showIds} /> {t("Ids, tags and file names")}</label>
       <label class="tog"><input type="checkbox" bind:checked={reader.showMarks} /> {t("Lines with authorship marks, highlighted")}</label>
     </div>
-    {#if openOther}
-      <div class="field">
-        <span class="k">{t("Project")}</span>
-        {#if path}<code class="path">{path}</code>{/if}
-        <p class="hint">{t("The app reads the dialogue files where they are, follows changes on disk, and writes only the files you change, when you save.")}</p>
-        <div><button class="btn" type="button" onclick={() => { close(); openOther(); }}>{t("Open another project…")}</button></div>
-      </div>
-    {/if}
   </div>
 </Dialog>

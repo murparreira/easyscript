@@ -115,6 +115,7 @@
       <button class="btn small" type="button" onclick={resetState} title={t("Forget the flags set and the answers given")}>{t("Reset story state")}</button>
       <span class="grow"></span>
       <button class="btn small" type="button" aria-pressed={showState} onclick={() => (showState = !showState)}>{t("State")}</button>
+      <button class="btn small" type="button" onclick={() => (reader.playOpen = false)} title={t("Close the play panel; Play from here opens it again")}>{t("Hide")}</button>
     </div>
     {#if stale}<p class="hint">{t("The script changed.")} <button type="button" class="link" onclick={() => restart()}>{t("Restart to play the new version")}</button></p>{/if}
   </div>

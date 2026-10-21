@@ -37,8 +37,6 @@
 <div class="subbar">
   <input class="search" type="search" placeholder={t("Search lines, speakers, labels, flags…")} autocomplete="off" aria-label={t("Search the script")} bind:value={typed} oninput={search} />
   <VariantFilter />
-  <label class="tog"><input type="checkbox" bind:checked={reader.showIds} /> {t("Ids and file names")}</label>
-  <label class="tog"><input type="checkbox" bind:checked={reader.showMarks} /> {t("Highlight marked lines")}</label>
   <span class="meta-line">
     {#if reader.searching}
       {plural(shown, "{n} label matches.", "{n} labels match.")}

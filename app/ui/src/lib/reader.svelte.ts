@@ -50,6 +50,8 @@ export class Reader {
   scene: string | null = $state(null);
   /** Labels by id (the first, if two files have the same). */
   byId: Map<string, Label>;
+  /** A label for the map to point at when it opens. */
+  mapFocus: string | null = $state(null);
   /** Asked to play from a label (a new object each time, so asking again plays again). */
   playFrom: { label: string } | null = $state(null);
 
@@ -70,6 +72,8 @@ export class Reader {
   facesBySpeaker: Map<string, string[]>;
   /** How the script calls a flag in a condition, with `{flag}` for its name. */
   flagCall: string | null;
+  /** How the script sets a flag (`do Globals.set_flag("{flag}")`), with `{flag}` for its name. */
+  flagSet: string | null;
 
   constructor(view: ReadView, writable = false) {
     this.view = $state.raw(view);
@@ -94,6 +98,7 @@ export class Reader {
     ]);
     this.facesBySpeaker = $derived(facesBySpeaker(this.view, this.tagSpecs));
     this.flagCall = $derived(flagCall(this.view));
+    this.flagSet = $derived(flagSet(this.view));
     const prefs = loadPrefs();
     this.variants = prefs.variants ?? {};
     this.showIds = prefs.showIds ?? true;
@@ -219,6 +224,23 @@ function flagCall(view: ReadView): string | null {
     }
   }
   return `${read}("{flag}")`;
+}
+
+/** The way the script sets a flag, taken from an effect that does. */
+function flagSet(view: ReadView): string | null {
+  const set = view.flag_functions.set[0];
+  if (!set) return null;
+  const re = new RegExp(`([A-Za-z_][\\w.]*\\.)?${set.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\(`);
+  for (const file of view.script.files) {
+    for (const label of file.sections.flatMap((s) => s.labels)) {
+      for (const node of walk(label.body)) {
+        if (node.type !== "effect") continue;
+        const m = node.expr.match(re);
+        if (m) return `${node.keyword} ${m[1] ?? ""}${set}("{flag}")`;
+      }
+    }
+  }
+  return `do ${set}("{flag}")`;
 }
 
 const KEY = Symbol("reader");

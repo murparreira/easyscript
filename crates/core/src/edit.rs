@@ -67,6 +67,26 @@ pub enum Edit {
         at: usize,
         up: bool,
     },
+    /// A line of the game's code, `do ...` or `set ...`, placed as `InsertLine` places one.
+    InsertCode {
+        at: usize,
+        after: bool,
+        #[serde(default)]
+        under: bool,
+        code: String,
+    },
+    /// `if`, `elif` or `else` (with its condition, none for `else`) and a first line
+    /// nested under it, placed as `InsertLine` places one: an `elif` or `else` goes after
+    /// the last arm of its `if`.
+    InsertCondition {
+        at: usize,
+        after: bool,
+        #[serde(default)]
+        under: bool,
+        keyword: String,
+        condition: Option<String>,
+        line: NewLine,
+    },
     /// Where a line or choice goes next (`=> title`, `=> END`, `=> END!`); none removes
     /// its jump.
     SetJump {
@@ -181,6 +201,87 @@ pub fn apply(text: &str, edit: &Edit) -> Result<Applied, EditError> {
                 applied = set_jump(&applied.text, &root, applied.at, line.jump.as_deref())?;
             }
             Ok(applied)
+        }
+        Edit::InsertCode {
+            at,
+            after,
+            under,
+            code,
+        } => {
+            let code = code.trim();
+            let Some(keyword) = ["do!", "do", "set"].into_iter().find(|k| {
+                code.strip_prefix(k)
+                    .is_some_and(|rest| rest.starts_with(' '))
+            }) else {
+                return fail("game code here starts with `do` or `set`");
+            };
+            if code.contains(['\n', '\r']) {
+                return fail("game code here is one line");
+            }
+            let (pos, indent, parent) = position(&root, *at, *after, *under)?;
+            place(
+                text,
+                pos,
+                &format!("{indent}{code}"),
+                newline_of(&root),
+                |inserted, line| {
+                    inserted.kind == MUTATION_LINE
+                        && !inserted.unreadable
+                        && line.text().to_string().trim().starts_with(keyword)
+                },
+                parent,
+            )
+            .map_err(|_| EditError(format!("`{code}` does not read as game code")))
+        }
+        Edit::InsertCondition {
+            at,
+            after,
+            under,
+            keyword,
+            condition,
+            line,
+        } => {
+            let condition = condition
+                .as_deref()
+                .map(str::trim)
+                .filter(|c| !c.is_empty());
+            let written = match (keyword.as_str(), condition) {
+                ("if" | "elif", Some(c)) if !c.contains(['\n', '\r']) => format!("{keyword} {c}"),
+                ("if" | "elif", _) => return fail("a condition is one line, and not empty"),
+                ("else", None) => "else".to_owned(),
+                ("else", Some(_)) => return fail("an `else` has no condition"),
+                _ => return fail("conditions are `if`, `elif` or `else`"),
+            };
+            let (pos, indent, parent) = position(&root, *at, *after, *under)?;
+            let applied = place(
+                text,
+                pos,
+                &format!("{indent}{written}"),
+                newline_of(&root),
+                |inserted, line| {
+                    // An `elif` or `else` follows an `if` or `elif` arm.
+                    let follows = keyword == "if"
+                        || std::iter::successors(line.prev_sibling(), SyntaxNode::prev_sibling)
+                            .find(|l| !is_trivia(l.kind()))
+                            .is_some_and(|l| {
+                                l.kind() == CONDITION_LINE
+                                    && l.children_with_tokens().all(|e| e.kind() != ELSE_KW)
+                            });
+                    inserted.kind == CONDITION_LINE
+                        && !inserted.unreadable
+                        && inserted.condition.as_deref() == condition
+                        && follows
+                },
+                parent,
+            )
+            .map_err(|_| EditError(format!("`{written}` does not read as a condition here")))?;
+            // Its first line, nested under it.
+            let root = dm_syntax::parse(&applied.text).syntax();
+            let body = insert_under(&applied.text, &root, applied.at, line)?;
+            Ok(Applied {
+                text: body.text,
+                at: applied.at,
+            })
         }
         Edit::RemoveLine { at } => remove_line(text, &root, *at),
         Edit::MoveLine { at, up } => move_line(text, &root, *at, *up),
@@ -513,27 +614,32 @@ fn insert_line(
     after: bool,
     new: &NewLine,
 ) -> Result<Applied, EditError> {
-    let line = line_at(root, at)?;
-    let indent = first_token(&line, INDENT).unwrap_or_default();
-    let pos = if after { end(&line) } else { unit_start(&line) };
-    insert_at(text, root, pos, &indent, new, None)
+    let (pos, indent, parent) = position(root, at, after, false)?;
+    insert_at(text, root, pos, &indent, new, parent)
 }
 
-/// A new line nested under a choice or a condition, after the lines there.
-fn insert_under(
-    text: &str,
+/// Where a new line goes, and its indentation: before or after the line at `at` (with
+/// what is nested under it), or under it, after the lines nested there. The third value
+/// is the line it must end up under, when it goes under one.
+fn position(
     root: &SyntaxNode,
     at: usize,
-    new: &NewLine,
-) -> Result<Applied, EditError> {
-    let owner = line_at(root, at)?;
+    after: bool,
+    under: bool,
+) -> Result<(usize, String, Option<usize>), EditError> {
+    let line = line_at(root, at)?;
+    if !under {
+        let indent = first_token(&line, INDENT).unwrap_or_default();
+        let pos = if after { end(&line) } else { unit_start(&line) };
+        return Ok((pos, indent, None));
+    }
     if !matches!(
-        owner.kind(),
+        line.kind(),
         RESPONSE_LINE | CONDITION_LINE | WHEN_LINE | WHILE_LINE
     ) {
         return fail("lines go under a choice or a condition only");
     }
-    let nested = first_child(&owner, BLOCK).and_then(|block| {
+    let nested = first_child(&line, BLOCK).and_then(|block| {
         block
             .children()
             .filter(|n| n.kind().is_line() && !is_trivia(n.kind()))
@@ -543,12 +649,23 @@ fn insert_under(
         Some(last) => first_token(last, INDENT).unwrap_or_default(),
         None => format!(
             "{}{}",
-            first_token(&owner, INDENT).unwrap_or_default(),
+            first_token(&line, INDENT).unwrap_or_default(),
             indent_unit(root)
         ),
     };
-    let pos = nested.as_ref().map_or_else(|| end(&owner), end);
-    insert_at(text, root, pos, &indent, new, Some(at))
+    let pos = nested.as_ref().map_or_else(|| end(&line), end);
+    Ok((pos, indent, Some(at)))
+}
+
+/// A new line nested under a choice or a condition, after the lines there.
+fn insert_under(
+    text: &str,
+    root: &SyntaxNode,
+    at: usize,
+    new: &NewLine,
+) -> Result<Applied, EditError> {
+    let (pos, indent, parent) = position(root, at, true, true)?;
+    insert_at(text, root, pos, &indent, new, parent)
 }
 
 /// The indentation a file nests lines with: a tab, or its narrowest run of spaces.

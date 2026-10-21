@@ -1398,3 +1398,153 @@ fn remove_labels() {
         expect!["refused: no label's title starts there"],
     );
 }
+
+#[test]
+fn insert_code_and_conditions() {
+    let code = |code: &'static str, after: bool, under: bool| {
+        move |at| Edit::InsertCode {
+            at,
+            after,
+            under,
+            code: code.into(),
+        }
+    };
+    check(
+        SCRIPT,
+        3,
+        code("do Globals.set_flag(\"gull\")", true, false),
+        expect![[r#"
+        at line 4
+        ~ start
+        Keeper: Another storm. [#face=keeper_calm, mood=calm]
+        A gull cries.
+        do Globals.set_flag("gull")
+        - Ask about the oil [if not has_flag("asked")]
+        	Keeper: In the shed.
+        # ✏ prod
+        - Leave => bye
+        if Globals.easy()
+        	Keeper: Easy.
+        else
+        	Keeper: Hard.
+        => END
+    "#]],
+    );
+    check(
+        SCRIPT,
+        4,
+        code("set gold += 1", true, true),
+        expect![[r#"
+        at line 6
+        ~ start
+        Keeper: Another storm. [#face=keeper_calm, mood=calm]
+        A gull cries.
+        - Ask about the oil [if not has_flag("asked")]
+        	Keeper: In the shed.
+        	set gold += 1
+        # ✏ prod
+        - Leave => bye
+        if Globals.easy()
+        	Keeper: Easy.
+        else
+        	Keeper: Hard.
+        => END
+    "#]],
+    );
+    check(
+        SCRIPT,
+        3,
+        code("Globals.set_flag(\"gull\")", true, false),
+        expect!["refused: game code here starts with `do` or `set`"],
+    );
+    check(
+        SCRIPT,
+        3,
+        code("do ", true, false),
+        expect!["refused: game code here starts with `do` or `set`"],
+    );
+
+    let condition = |keyword: &'static str, condition: Option<&'static str>, after: bool| {
+        move |at| Edit::InsertCondition {
+            at,
+            after,
+            under: false,
+            keyword: keyword.into(),
+            condition: condition.map(Into::into),
+            line: NewLine {
+                speaker: Some("Keeper".into()),
+                text: "Watch out.".into(),
+                ..Default::default()
+            },
+        }
+    };
+    check(
+        SCRIPT,
+        3,
+        condition("if", Some("has_flag(\"oil\")"), true),
+        expect![[r#"
+        at line 4
+        ~ start
+        Keeper: Another storm. [#face=keeper_calm, mood=calm]
+        A gull cries.
+        if has_flag("oil")
+        	Keeper: Watch out.
+        - Ask about the oil [if not has_flag("asked")]
+        	Keeper: In the shed.
+        # ✏ prod
+        - Leave => bye
+        if Globals.easy()
+        	Keeper: Easy.
+        else
+        	Keeper: Hard.
+        => END
+    "#]],
+    );
+    // After the last arm of an `if`: another arm.
+    check(
+        SCRIPT,
+        10,
+        condition("elif", Some("Globals.hard()"), false),
+        expect![[r#"
+        at line 10
+        ~ start
+        Keeper: Another storm. [#face=keeper_calm, mood=calm]
+        A gull cries.
+        - Ask about the oil [if not has_flag("asked")]
+        	Keeper: In the shed.
+        # ✏ prod
+        - Leave => bye
+        if Globals.easy()
+        	Keeper: Easy.
+        elif Globals.hard()
+        	Keeper: Watch out.
+        else
+        	Keeper: Hard.
+        => END
+    "#]],
+    );
+    check(
+        SCRIPT,
+        3,
+        condition("else", Some("x"), true),
+        expect!["refused: an `else` has no condition"],
+    );
+    check(
+        SCRIPT,
+        3,
+        condition("if", None, true),
+        expect!["refused: a condition is one line, and not empty"],
+    );
+    check(
+        SCRIPT,
+        3,
+        condition("else", None, true),
+        expect!["refused: `else` does not read as a condition here"],
+    );
+    check(
+        SCRIPT,
+        12,
+        condition("else", None, false),
+        expect!["refused: `else` does not read as a condition here"],
+    );
+}

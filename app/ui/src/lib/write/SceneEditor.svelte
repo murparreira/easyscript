@@ -87,8 +87,7 @@
         </div>
         <div class="scene-actions">
           <button class="btn primary small" type="button" onclick={play}>{t("▶ Play from here")}</button>
-          <button class="btn small" type="button" onclick={() => (reader.playOpen = !reader.playOpen)}>{reader.playOpen ? t("Hide play") : t("Show play")}</button>
-          <button class="btn small" type="button" onclick={() => (reader.tab = "map")}>{t("Show on map")}</button>
+          <button class="btn small" type="button" onclick={() => { reader.mapFocus = label.id; reader.tab = "map"; }}>{t("Show on map")}</button>
           <span class="grow"></span>
           <button class="btn small danger" type="button" onclick={remove} disabled={editor.busy}>{t("Remove scene")}</button>
         </div>

@@ -3,6 +3,7 @@
   // the game starts them; who speaks where; which flags each place sets and reads. The
   // walkthrough beside the map.
   import { marked } from "marked";
+  import { untrack } from "svelte";
   import type { FlowKind } from "./bindings/FlowKind";
   import type { Label } from "./bindings/Label";
   import { walk } from "./model";
@@ -119,6 +120,17 @@
     hover = entry[0];
     scroller.scrollTo({ left: entry[1].x - 80, top: entry[1].y - 120, behavior: "smooth" });
   }
+  // Opened from a scene ("Show on map"): point at it.
+  $effect(() => {
+    const id = reader.mapFocus;
+    if (!id || !scroller) return;
+    untrack(() => {
+      focusLabel(id);
+      pinned = id;
+      reader.mapFocus = null;
+    });
+  });
+  let pinned: string | null = $state(null);
   function docClick(e: MouseEvent) {
     const target = (e.target as HTMLElement).closest<HTMLElement>("[data-label]");
     if (target?.dataset.label) focusLabel(target.dataset.label);
@@ -216,6 +228,7 @@
               class:unreached={!reached.has(key)}
               class:dim={(linked && !linked.has(key)) || (speaking && !speaking.has(key)) || (flagged && !mark)}
               class:lit={speaking?.has(key) || !!mark}
+              class:pinned={pinned === p.label.id}
               transform="translate({p.x} {p.y})"
               role="button"
               tabindex="0"

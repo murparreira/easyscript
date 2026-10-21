@@ -50,7 +50,7 @@
       <button type="button" class="w-say" onclick={open} title={t("Click to edit")}><TextView segments={line.text} /></button>
       {#if line.jump}<div><JumpPill jump={line.jump} /></div>{/if}
     </div>
-    <Tools {span} choice={false} edit={false} />
+    <Tools {span} choice={false} />
   </div>
   {#if editor.target && editor.is(span.file, span.start, "after")}
     <LineEditor target={editor.target} speaker={editor.target.choice ? null : line.speaker} />

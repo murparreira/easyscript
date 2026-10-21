@@ -8,6 +8,7 @@
   import ExportDialog from "./ExportDialog.svelte";
   import { plural, t } from "./i18n.svelte";
   import ImportDialog from "./ImportDialog.svelte";
+  import ProjectDialog from "./ProjectDialog.svelte";
   import ProjectPanel from "./ProjectPanel.svelte";
   import { Reader, type Tab, provideReader } from "./reader.svelte";
   import ReadView from "./ReadView.svelte";
@@ -57,6 +58,7 @@
   let exporting = $state(false);
   let importing = $state(false);
   let settings = $state(false);
+  let projectMenu = $state(false);
   let reviewing = $state(false);
   const changed = $derived(editor?.state.changed.length ?? 0);
   const conflicts = $derived(editor?.state.conflicts.length ?? 0);
@@ -84,10 +86,17 @@
 
 <div class="app">
   <header class="topbar">
-    <div class="brand">
-      <div class="eyebrow">{editor ? t("Script editor") : t("The whole script")}</div>
-      <div class="title" title={path ?? undefined}>{reader.view.title}</div>
-    </div>
+    {#if openOther}
+      <button type="button" class="brand" onclick={() => (projectMenu = true)} title={t("Open another project…")}>
+        <span class="eyebrow">{t("Script editor")}</span>
+        <span class="title">{reader.view.title} <span class="caret" aria-hidden="true">▾</span></span>
+      </button>
+    {:else}
+      <div class="brand">
+        <div class="eyebrow">{t("The whole script")}</div>
+        <div class="title">{reader.view.title}</div>
+      </div>
+    {/if}
     <div class="tabs" role="tablist" aria-label={t("Views")}>
       {#each tabs.filter((tab) => editor || !tab.desktop) as tab (tab.id)}
         <button type="button" role="tab" aria-selected={reader.tab === tab.id} onclick={() => (reader.tab = tab.id)}>{tab.name()}</button>
@@ -140,5 +149,6 @@
 
 {#if exporting}<ExportDialog close={() => (exporting = false)} />{/if}
 {#if importing}<ImportDialog close={() => (importing = false)} />{/if}
-{#if settings}<SettingsDialog close={() => (settings = false)} {path} {openOther} />{/if}
+{#if settings}<SettingsDialog close={() => (settings = false)} />{/if}
+{#if projectMenu && openOther}<ProjectDialog close={() => (projectMenu = false)} {path} {openOther} />{/if}
 {#if reviewing}<DiffPanel close={() => (reviewing = false)} />{/if}
