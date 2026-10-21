@@ -104,9 +104,15 @@ Terminal=false
 Categories=Development;
 EOF
   command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$prefix/share/applications" >/dev/null 2>&1 || true
-  if command -v ldconfig >/dev/null 2>&1 && ! ldconfig -p 2>/dev/null | grep -q 'libEGL\.so\.1'; then
-    echo "This system has no OpenGL/EGL library, which the app needs to draw its window: install Mesa"
-    echo "(libegl1 on Debian and Ubuntu, mesa on Fedora and Arch), as any desktop has."
+  if command -v ldconfig >/dev/null 2>&1; then
+    libs="$(ldconfig -p 2>/dev/null)"
+    case "$libs" in
+      *libEGL.so.1*libGLESv2.so.2* | *libGLESv2.so.2*libEGL.so.1*) ;;
+      *)
+        echo "This system lacks the OpenGL libraries the app draws its window with, which any"
+        echo "desktop has: install Mesa (libegl1 libgles2 on Debian and Ubuntu, mesa on Fedora and Arch)."
+        ;;
+    esac
   fi
   bin="$prefix/bin"
   tar -xzf "$tmp/cli.tar.gz" -C "$tmp"
