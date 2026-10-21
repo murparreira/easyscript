@@ -1,7 +1,7 @@
 //! Every `.dialogue` file of a real project round-trips. The project's path comes from
-//! `DIALOGUE_MAKER_PROJECT`; without it the test does nothing (CI never has one).
+//! `EASYSCRIPT_PROJECT`; without it the test does nothing (CI never has one).
 //!
-//! `cargo test -p dm-syntax --test real_project -- --nocapture` also prints counts.
+//! `cargo test -p es-syntax --test real_project -- --nocapture` also prints counts.
 
 mod common;
 
@@ -9,12 +9,12 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use dm_syntax::{SyntaxKind, ast::Line};
+use es_syntax::{SyntaxKind, ast::Line};
 
 #[test]
 fn real_project_round_trips() {
-    let Some(root) = std::env::var_os("DIALOGUE_MAKER_PROJECT") else {
-        eprintln!("skipped: DIALOGUE_MAKER_PROJECT is not set");
+    let Some(root) = std::env::var_os("EASYSCRIPT_PROJECT") else {
+        eprintln!("skipped: EASYSCRIPT_PROJECT is not set");
         return;
     };
     // Relative to the workspace root, where the command is typed (tests run in the crate).
@@ -23,7 +23,7 @@ fn real_project_round_trips() {
         .join(root);
     assert!(
         root.is_dir(),
-        "DIALOGUE_MAKER_PROJECT is not a directory: {}",
+        "EASYSCRIPT_PROJECT is not a directory: {}",
         root.display()
     );
     let mut files = Vec::new();

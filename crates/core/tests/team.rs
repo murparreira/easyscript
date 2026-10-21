@@ -4,7 +4,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use dm_core::team::{self, SceneRef};
+use es_core::team::{self, SceneRef};
 use git2::{Repository, Signature};
 
 const SCRIPT: &str = "~ a\nKeeper: One.\n\n~ b\nKeeper: Two.\n\n~ c\nKeeper: Three.\n";

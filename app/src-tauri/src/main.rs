@@ -5,15 +5,15 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use dm_core::Workspace;
-use dm_core::edit::Edit;
-use dm_core::git::{self, GitStatus};
-use dm_core::project_file::ConfigEdit;
-use dm_core::team::{self, TeamState, Updated};
-use dm_core::workspace::{FileDiff, Session};
-use dm_formats::export::{Format, Options as ExportOptions};
-use dm_formats::import::{Imported, Source};
-use dm_github::{Account, GitHub, PullRequest, Repo, RepoInfo, SignIn};
+use es_core::Workspace;
+use es_core::edit::Edit;
+use es_core::git::{self, GitStatus};
+use es_core::project_file::ConfigEdit;
+use es_core::team::{self, TeamState, Updated};
+use es_core::workspace::{FileDiff, Session};
+use es_formats::export::{Format, Options as ExportOptions};
+use es_formats::import::{Imported, Source};
+use es_github::{Account, GitHub, PullRequest, Repo, RepoInfo, SignIn};
 use notify_debouncer_full::notify::{RecommendedWatcher, RecursiveMode};
 use notify_debouncer_full::{DebounceEventResult, Debouncer, RecommendedCache, new_debouncer};
 use serde::Serialize;
@@ -80,7 +80,7 @@ async fn open_project<R: Runtime>(
         _watcher: watcher,
     });
     if let Some(window) = app.get_webview_window("main") {
-        let _ = window.set_title(&format!("{} — dialogue-maker", session.view.title));
+        let _ = window.set_title(&format!("{} — easyscript", session.view.title));
     }
     Ok(session)
 }
@@ -127,7 +127,7 @@ async fn new_dialogue_file(
 ) -> Result<Session, String> {
     with_workspace(&opened, move |ws| {
         let scene = scene.trim();
-        if !dm_core::edit::is_title(scene) {
+        if !es_core::edit::is_title(scene) {
             return Err(format!(
                 "`{scene}` cannot name a scene: letters, digits and _, not starting with a digit"
             ));
@@ -339,7 +339,7 @@ async fn team_send(
     let client = github.client.clone();
     tauri::async_runtime::spawn_blocking(move || {
         client.push(&root, &branch, token.as_deref())?;
-        let on_github = dm_github::origin(&root)?.and_then(|(_, repo)| repo);
+        let on_github = es_github::origin(&root)?.and_then(|(_, repo)| repo);
         let pull_request = match (token, on_github, shared) {
             (Some(token), Some(repo), Some(shared)) if shared != branch => {
                 let title = if title.trim().is_empty() {
@@ -351,7 +351,7 @@ async fn team_send(
             }
             _ => None,
         };
-        Ok::<_, dm_github::GitHubError>(Sent {
+        Ok::<_, es_github::GitHubError>(Sent {
             branch,
             pull_request,
         })
@@ -397,7 +397,7 @@ struct GitHubSession {
     stop_clone: Arc<AtomicBool>,
 }
 
-const KEYRING_SERVICE: &str = "dialogue-maker";
+const KEYRING_SERVICE: &str = "easyscript";
 const KEYRING_USER: &str = "github";
 
 fn keyring_entry() -> Option<keyring::Entry> {
@@ -468,8 +468,8 @@ async fn github_state(
         .map(|open| open.workspace.root().to_owned());
     let (git, origin) = match root {
         Some(root) => tauri::async_runtime::spawn_blocking(move || {
-            let git = dm_github::in_git(&root);
-            (git, dm_github::origin(&root).ok().flatten())
+            let git = es_github::in_git(&root);
+            (git, es_github::origin(&root).ok().flatten())
         })
         .await
         .map_err(|e| e.to_string())?,
@@ -576,7 +576,7 @@ fn github_clone_stop(github: State<'_, GitHubSession>) {
 #[tauri::command]
 async fn github_link(owner: String, name: String, opened: State<'_, Opened>) -> Result<(), String> {
     with_workspace(&opened, move |ws| {
-        dm_github::link(ws.root(), &Repo { owner, name }).map_err(|e| e.to_string())
+        es_github::link(ws.root(), &Repo { owner, name }).map_err(|e| e.to_string())
     })
     .await
 }
@@ -614,7 +614,7 @@ async fn github_sign_in_finish(github: State<'_, GitHubSession>) -> Result<Accou
     let (token, account) = tauri::async_runtime::spawn_blocking(move || {
         let token = client.finish_sign_in(&sign_in, &cancel)?;
         let account = client.account(&token)?;
-        Ok::<_, dm_github::GitHubError>((token, account))
+        Ok::<_, es_github::GitHubError>((token, account))
     })
     .await
     .map_err(|e| e.to_string())?
@@ -672,10 +672,10 @@ async fn export_script(
             ));
         }
         let project = ws.project();
-        let script = dm_core::lower(project);
+        let script = es_core::lower(project);
         let existing = std::fs::read_to_string(&target).ok();
         let text =
-            dm_formats::export::render(format, project, &script, &options, existing.as_deref())
+            es_formats::export::render(format, project, &script, &options, existing.as_deref())
                 .map_err(|e| e.to_string())?;
         std::fs::write(&target, text).map_err(|e| format!("{path}: {e}"))
     })
@@ -704,7 +704,7 @@ async fn export_dialogue_zip(
     opened: State<'_, Opened>,
 ) -> Result<(), String> {
     with_workspace(&opened, move |ws| {
-        let bytes = dm_formats::export::archive::dialogue_zip(ws.project(), &paths)?;
+        let bytes = es_formats::export::archive::dialogue_zip(ws.project(), &paths)?;
         std::fs::write(&path, bytes).map_err(|e| format!("{path}: {e}"))
     })
     .await
@@ -719,7 +719,7 @@ fn read_import(path: &str) -> Result<Imported, String> {
     let source = Source::of(Path::new(path))
         .ok_or_else(|| format!("{path}: not a .twee, .yarn, .ink or .dialogue file"))?;
     let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
-    Ok(dm_formats::import::import(source, &text))
+    Ok(es_formats::import::import(source, &text))
 }
 
 /// Another tool's script as a Dialogue Manager file, to look at before adding it.
@@ -788,7 +788,7 @@ async fn import_write(
     .await
 }
 
-/// A project folder given on the command line (`dm-app path/to/game`), if any.
+/// A project folder given on the command line (`es-app path/to/game`), if any.
 #[tauri::command]
 fn startup_project() -> Option<String> {
     std::env::args_os()
@@ -824,14 +824,14 @@ fn watch<R: Runtime>(
 }
 
 /// Hidden folders (`.git`, `.godot`) change all the time and never hold the script; the
-/// project's own `.dialogue-maker` folder does hold its documents.
+/// project's own `.easyscript` folder does hold its documents.
 fn matters(root: &Path, path: &Path) -> bool {
     let Ok(relative) = path.strip_prefix(root) else {
         return false;
     };
     !relative.components().any(|c| {
         let name = c.as_os_str().to_string_lossy();
-        name.starts_with('.') && name != ".dialogue-maker"
+        name.starts_with('.') && name != ".easyscript"
     })
 }
 
@@ -859,7 +859,7 @@ fn main() {
         GitHubSession::new(GitHub::default(), true),
     )
     .run(tauri::generate_context!())
-    .expect("error while running dialogue-maker");
+    .expect("error while running easyscript");
 }
 
 /// The app's plugins, state and commands, on any runtime (the tests use a mock one, and a
@@ -917,10 +917,7 @@ mod tests {
     fn hidden_folders_do_not_matter_but_documents_do() {
         let root = Path::new("/game");
         assert!(matters(root, Path::new("/game/src/a.dialogue")));
-        assert!(matters(
-            root,
-            Path::new("/game/.dialogue-maker/walkthrough.md")
-        ));
+        assert!(matters(root, Path::new("/game/.easyscript/walkthrough.md")));
         assert!(!matters(root, Path::new("/game/.godot/imported/x.ctex")));
         assert!(!matters(root, Path::new("/game/.git/index")));
         assert!(!matters(root, Path::new("/elsewhere/a.dialogue")));
@@ -1404,7 +1401,7 @@ mod tests {
 
     /// The app's commands over HTTP, to drive the frontend in a browser against the real
     /// backend (a fake `__TAURI_INTERNALS__` forwards `invoke` here):
-    /// `DM_BRIDGE_PORT=5299 cargo test -p dm-app bridge -- --ignored --nocapture`.
+    /// `DM_BRIDGE_PORT=5299 cargo test -p es-app bridge -- --ignored --nocapture`.
     /// `POST /invoke` takes `{cmd, args}` and answers as `invoke` would (an error with 500);
     /// `GET /events` hands over the events emitted since the last time.
     #[test]

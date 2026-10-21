@@ -7,14 +7,14 @@ use expect_test::expect;
 #[test]
 fn draft_from_the_dialogue() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/lighthouse");
-    let draft = dm_core::init::draft(&root).expect("drafts");
+    let draft = es_core::init::draft(&root).expect("drafts");
     // The draft is a valid project file.
-    dm_core::Config::parse(&draft)
+    es_core::Config::parse(&draft)
         .expect("parses")
         .compile()
         .expect("compiles");
     expect![[r##"
-        # dialogue-maker project file, drafted by `dialogue-maker init` from the dialogue files.
+        # easyscript project file, drafted by `easyscript init` from the dialogue files.
         # Every value below is a guess from what the files say: check it, then edit freely.
         # The format: https://github.com/murparreira/easyscript/blob/main/docs/project-file.md
 

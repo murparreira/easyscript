@@ -1,4 +1,4 @@
-# How writers use dialogue-maker
+# How writers use easyscript
 
 Notes from using the app as three people: a writer starting a game's dialogue, a writer coming back to a game the team has been changing, and two writers working on one script at the same time. Each part says what was wrong, what the app does now, and what is still open.
 
@@ -103,7 +103,7 @@ Each row was tried with the real backend and two clones of one repository ("Ana"
 The frontend runs in a browser against the real backend: the app's commands over HTTP, from the `bridge` test in `app/src-tauri/src/main.rs`. It is ignored by default and runs until stopped:
 
 ```sh
-DM_BRIDGE_PORT=5299 cargo test -p dm-app bridge -- --ignored --nocapture
+DM_BRIDGE_PORT=5299 cargo test -p es-app bridge -- --ignored --nocapture
 ```
 
 A page with a fake `__TAURI_INTERNALS__` forwards `invoke` to it and polls `GET /events` for `project-changed`. Two bridges on two ports, over two clones of one bare repository, are two writers on one team. The team logic itself is tested in `crates/core/tests/team.rs` and `crates/core/tests/workspace.rs`.

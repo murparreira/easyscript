@@ -1,4 +1,4 @@
-//! `dialogue-maker check | stats | build | export | import | init`.
+//! `easyscript check | stats | build | export | import | init`.
 
 use std::fmt::Write as _;
 use std::io::Write as _;
@@ -6,11 +6,11 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use dm_core::{Project, Severity};
+use es_core::{Project, Severity};
 
 /// A workbench for game scripts: reads a project's dialogue files where they live.
 #[derive(Parser)]
-#[command(name = "dialogue-maker", version)]
+#[command(name = "easyscript", version)]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -67,7 +67,7 @@ enum Command {
         character: Option<String>,
         /// voice, voice-csv, fountain: the language of the export's own words (en, pt-BR).
         #[arg(long, default_value = "en", value_parser = parse_language)]
-        language: dm_formats::export::Language,
+        language: es_formats::export::Language,
     },
     /// Convert a Twine (`.twee`), Yarn Spinner (`.yarn`) or Ink (`.ink`) script into a
     /// Dialogue Manager file (a `.dialogue` file is copied). What does not convert is kept
@@ -80,7 +80,7 @@ enum Command {
         #[arg(short, long)]
         output: Option<PathBuf>,
     },
-    /// Draft a project file (`dialogue-maker.toml`) for a project that has none, from what
+    /// Draft a project file (`easyscript.toml`) for a project that has none, from what
     /// its dialogue says: characters, tags, flag functions, section headers.
     Init {
         /// The project's root folder.
@@ -100,8 +100,8 @@ enum Command {
     },
 }
 
-fn parse_language(tag: &str) -> Result<dm_formats::export::Language, String> {
-    dm_formats::export::Language::parse(tag).ok_or_else(|| format!("`{tag}`: en or pt-BR"))
+fn parse_language(tag: &str) -> Result<es_formats::export::Language, String> {
+    es_formats::export::Language::parse(tag).ok_or_else(|| format!("`{tag}`: en or pt-BR"))
 }
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -120,9 +120,9 @@ enum ExportFormat {
     Zip,
 }
 
-impl From<ExportFormat> for dm_formats::export::Format {
+impl From<ExportFormat> for es_formats::export::Format {
     fn from(f: ExportFormat) -> Self {
-        use dm_formats::export::Format;
+        use es_formats::export::Format;
         match f {
             ExportFormat::Json => Format::Json,
             ExportFormat::Translation => Format::Translation,
@@ -139,7 +139,7 @@ struct ProjectArgs {
     /// The project's root folder.
     #[arg(default_value = ".")]
     path: PathBuf,
-    /// The project file, when it is not `dialogue-maker.toml` at the root.
+    /// The project file, when it is not `easyscript.toml` at the root.
     #[arg(long)]
     config: Option<PathBuf>,
 }
@@ -147,7 +147,7 @@ struct ProjectArgs {
 impl ProjectArgs {
     fn load(&self) -> Result<Project, ExitCode> {
         Project::load(&self.path, self.config.as_deref()).map_err(|e| {
-            eprintln!("dialogue-maker: {e}");
+            eprintln!("easyscript: {e}");
             ExitCode::from(2)
         })
     }
@@ -164,8 +164,8 @@ fn main() -> ExitCode {
                 Ok(p) => p,
                 Err(code) => return code,
             };
-            let script = dm_core::lower(&project);
-            let problems = dm_core::check(&project, &script);
+            let script = es_core::lower(&project);
+            let problems = es_core::check(&project, &script);
             let errors = problems
                 .iter()
                 .filter(|d| d.severity == Severity::Error)
@@ -201,23 +201,23 @@ fn main() -> ExitCode {
                 Err(code) => return code,
             };
             let view = if editing {
-                dm_core::view::editing_view(&project)
+                es_core::view::editing_view(&project)
             } else {
-                dm_core::read_view(&project)
+                es_core::read_view(&project)
             };
             let data = serde_json::to_string(&view).expect("serializable");
             let contents = if json {
                 data
             } else if PAGE.is_empty() {
                 eprintln!(
-                    "dialogue-maker: this binary was built without the page; run `npm run build:page`, then build it again"
+                    "easyscript: this binary was built without the page; run `npm run build:page`, then build it again"
                 );
                 return ExitCode::from(2);
             } else {
                 page(&data)
             };
             if let Err(e) = std::fs::write(&output, contents) {
-                eprintln!("dialogue-maker: {}: {e}", output.display());
+                eprintln!("easyscript: {}: {e}", output.display());
                 return ExitCode::from(2);
             }
             eprintln!(
@@ -245,29 +245,29 @@ fn main() -> ExitCode {
             };
             if let ExportFormat::Zip = format {
                 let Some(output) = output else {
-                    eprintln!("dialogue-maker: a ZIP goes to a file: give it with -o");
+                    eprintln!("easyscript: a ZIP goes to a file: give it with -o");
                     return ExitCode::from(2);
                 };
-                let written = dm_formats::export::archive::dialogue_zip(&project, &[])
+                let written = es_formats::export::archive::dialogue_zip(&project, &[])
                     .and_then(|bytes| std::fs::write(&output, bytes).map_err(|e| e.to_string()));
                 if let Err(e) = written {
-                    eprintln!("dialogue-maker: {}: {e}", output.display());
+                    eprintln!("easyscript: {}: {e}", output.display());
                     return ExitCode::from(2);
                 }
                 eprintln!("wrote {}", output.display());
                 return ExitCode::SUCCESS;
             }
-            let script = dm_core::lower(&project);
+            let script = es_core::lower(&project);
             let existing = output
                 .as_ref()
                 .and_then(|o| std::fs::read_to_string(o).ok());
-            let options = dm_formats::export::Options {
+            let options = es_formats::export::Options {
                 locale: Some(locale),
                 extra_locales: translate_to,
                 character,
                 language,
             };
-            let text = match dm_formats::export::render(
+            let text = match es_formats::export::render(
                 format.into(),
                 &project,
                 &script,
@@ -276,7 +276,7 @@ fn main() -> ExitCode {
             ) {
                 Ok(text) => text,
                 Err(e) => {
-                    eprintln!("dialogue-maker: {e}");
+                    eprintln!("easyscript: {e}");
                     return ExitCode::from(2);
                 }
             };
@@ -284,7 +284,7 @@ fn main() -> ExitCode {
                 None => print(&text),
                 Some(output) => {
                     if let Err(e) = std::fs::write(&output, &text) {
-                        eprintln!("dialogue-maker: {}: {e}", output.display());
+                        eprintln!("easyscript: {}: {e}", output.display());
                         return ExitCode::from(2);
                     }
                     eprintln!("wrote {}", output.display());
@@ -293,9 +293,9 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         Command::Import { file, output } => {
-            let Some(source) = dm_formats::import::Source::of(&file) else {
+            let Some(source) = es_formats::import::Source::of(&file) else {
                 eprintln!(
-                    "dialogue-maker: {}: not a .twee, .yarn, .ink or .dialogue file",
+                    "easyscript: {}: not a .twee, .yarn, .ink or .dialogue file",
                     file.display()
                 );
                 return ExitCode::from(2);
@@ -303,11 +303,11 @@ fn main() -> ExitCode {
             let text = match std::fs::read_to_string(&file) {
                 Ok(t) => t,
                 Err(e) => {
-                    eprintln!("dialogue-maker: {}: {e}", file.display());
+                    eprintln!("easyscript: {}: {e}", file.display());
                     return ExitCode::from(2);
                 }
             };
-            let imported = dm_formats::import::import(source, &text);
+            let imported = es_formats::import::import(source, &text);
             for w in &imported.warnings {
                 eprintln!("{}:{}: {}", file.display(), w.line, w.message);
             }
@@ -325,7 +325,7 @@ fn main() -> ExitCode {
                         } else {
                             e.to_string()
                         };
-                        eprintln!("dialogue-maker: {}: {why}", output.display());
+                        eprintln!("easyscript: {}: {why}", output.display());
                         return ExitCode::from(2);
                     }
                     eprintln!(
@@ -339,25 +339,25 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         Command::Init { path, stdout } => {
-            let target = path.join(dm_core::config::FILE_NAME);
+            let target = path.join(es_core::config::FILE_NAME);
             if !stdout && target.exists() {
                 eprintln!(
-                    "dialogue-maker: {} already exists; it is left as it is",
+                    "easyscript: {} already exists; it is left as it is",
                     target.display()
                 );
                 return ExitCode::from(2);
             }
-            let draft = match dm_core::init::draft(&path) {
+            let draft = match es_core::init::draft(&path) {
                 Ok(d) => d,
                 Err(e) => {
-                    eprintln!("dialogue-maker: {e}");
+                    eprintln!("easyscript: {e}");
                     return ExitCode::from(2);
                 }
             };
             if stdout {
                 print(&draft);
             } else if let Err(e) = std::fs::write(&target, draft) {
-                eprintln!("dialogue-maker: {}: {e}", target.display());
+                eprintln!("easyscript: {}: {e}", target.display());
                 return ExitCode::from(2);
             } else {
                 eprintln!("wrote {}: a draft to check and edit", target.display());
@@ -369,8 +369,8 @@ fn main() -> ExitCode {
                 Ok(p) => p,
                 Err(code) => return code,
             };
-            let script = dm_core::lower(&project);
-            let stats = dm_core::stats(&script);
+            let script = es_core::lower(&project);
+            let stats = es_core::stats(&script);
             if json {
                 print(&(serde_json::to_string_pretty(&stats).expect("serializable") + "\n"));
             } else {
@@ -411,7 +411,7 @@ fn plural(n: usize, word: &str) -> String {
     }
 }
 
-fn format_stats(project: &Project, s: &dm_core::Stats) -> String {
+fn format_stats(project: &Project, s: &es_core::Stats) -> String {
     let mut out = String::new();
     if let Some(name) = &project.config.name {
         out.push_str(name);

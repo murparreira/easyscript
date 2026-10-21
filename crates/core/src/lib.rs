@@ -2,12 +2,12 @@
 //! and tags, built from format syntax trees; the checks and stats over it.
 //!
 //! ```no_run
-//! let project = dm_core::Project::load(std::path::Path::new("."), None)?;
-//! let script = dm_core::lower(&project);
-//! for problem in dm_core::check(&project, &script) {
+//! let project = es_core::Project::load(std::path::Path::new("."), None)?;
+//! let script = es_core::lower(&project);
+//! for problem in es_core::check(&project, &script) {
 //!     eprintln!("{problem}");
 //! }
-//! # Ok::<(), dm_core::LoadError>(())
+//! # Ok::<(), es_core::LoadError>(())
 //! ```
 
 pub mod check;

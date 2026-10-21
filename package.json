@@ -1,5 +1,5 @@
 {
-  "name": "dialogue-maker",
+  "name": "easyscript",
   "private": true,
   "workspaces": [
     "app/ui"

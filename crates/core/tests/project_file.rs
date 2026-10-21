@@ -1,7 +1,7 @@
 //! Edits to a project file keep it as written: only what an edit is about changes.
 
-use dm_core::config::TagKind;
-use dm_core::project_file::{ConfigEdit, apply};
+use es_core::config::TagKind;
+use es_core::project_file::{ConfigEdit, apply};
 use expect_test::{Expect, expect};
 
 const FILE: &str = r#"# The lighthouse's project file.

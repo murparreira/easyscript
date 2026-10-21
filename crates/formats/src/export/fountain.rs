@@ -6,8 +6,8 @@
 
 use std::fmt::Write as _;
 
-use dm_core::model::{JumpTarget, Line, Node, NodeKind, Segment};
-use dm_core::{Project, Script};
+use es_core::model::{JumpTarget, Line, Node, NodeKind, Segment};
+use es_core::{Project, Script};
 
 use super::words::{Language, Words, fill};
 use super::{Source, plain};

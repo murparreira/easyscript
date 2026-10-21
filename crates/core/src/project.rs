@@ -4,7 +4,7 @@ use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use dm_syntax::Parse;
+use es_syntax::Parse;
 use walkdir::WalkDir;
 
 use crate::config::{self, Compiled, Config, ConfigError};
@@ -141,7 +141,7 @@ impl Project {
 
 impl SourceFile {
     pub fn new(path: String, text: String) -> Self {
-        let parse = dm_syntax::parse(&text);
+        let parse = es_syntax::parse(&text);
         let line_starts = std::iter::once(0)
             .chain(text.match_indices('\n').map(|(i, _)| i + 1))
             .collect();

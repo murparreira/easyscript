@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "dialogue-maker script",
+  "title": "easyscript script",
   "description": "A project's whole script.",
   "type": "object",
   "properties": {
@@ -26,7 +26,7 @@
       }
     },
     "format": {
-      "description": "Always `dialogue-maker/script`.",
+      "description": "Always `easyscript/script`.",
       "type": "string"
     },
     "name": {

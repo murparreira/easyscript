@@ -13,7 +13,7 @@
   import SignInDialog from "./SignInDialog.svelte";
 
   let { close, opened }: { close: () => void; opened: (path: string) => void } = $props();
-  const PARENT = "dialogue-maker:clone-parent";
+  const PARENT = "easyscript:clone-parent";
 
   let repo = $state<RepoInfo | null>(null);
   let parent: string | null = $state(remembered());

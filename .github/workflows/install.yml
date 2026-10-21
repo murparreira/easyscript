@@ -35,8 +35,8 @@ jobs:
       - run: ./scripts/install.sh
       - name: Installed
         run: |
-          if [ "$RUNNER_OS" = macOS ]; then test -d "$HOME/Applications/dialogue-maker.app"; else test -x "$HOME/.local/bin/dialogue-maker-app" && test -f "$HOME/.local/share/applications/dialogue-maker.desktop"; fi
-          "$HOME/.local/bin/dialogue-maker" stats crates/core/tests/fixtures/lighthouse
+          if [ "$RUNNER_OS" = macOS ]; then test -d "$HOME/Applications/easyscript.app"; else test -x "$HOME/.local/bin/easyscript-app" && test -f "$HOME/.local/share/applications/easyscript.desktop"; fi
+          "$HOME/.local/bin/easyscript" stats crates/core/tests/fixtures/lighthouse
 
   windows:
     name: install.ps1 (windows-latest)
@@ -52,6 +52,6 @@ jobs:
       - name: Installed
         shell: pwsh
         run: |
-          Get-ChildItem $env:LOCALAPPDATA -Filter "dialogue-maker*.exe" -Recurse -Depth 2 | ForEach-Object FullName
-          & "$env:LOCALAPPDATA\dialogue-maker-cli\dialogue-maker.exe" stats crates/core/tests/fixtures/lighthouse
+          Get-ChildItem $env:LOCALAPPDATA -Filter "easyscript*.exe" -Recurse -Depth 2 | ForEach-Object FullName
+          & "$env:LOCALAPPDATA\easyscript-cli\easyscript.exe" stats crates/core/tests/fixtures/lighthouse
           if ($LASTEXITCODE -ne 0) { exit 1 }

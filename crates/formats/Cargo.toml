@@ -1,6 +1,6 @@
 [package]
-name = "dm-formats"
-description = "dialogue-maker exports (JSON, translation CSV, voice scripts, Fountain, the dialogue files as a ZIP) and imports (Twee, Yarn Spinner, Ink, Dialogue Manager)"
+name = "es-formats"
+description = "easyscript exports (JSON, translation CSV, voice scripts, Fountain, the dialogue files as a ZIP) and imports (Twee, Yarn Spinner, Ink, Dialogue Manager)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -11,8 +11,8 @@ workspace = true
 
 [dependencies]
 csv = "1.4.0"
-dm-core.workspace = true
-dm-syntax.workspace = true
+es-core.workspace = true
+es-syntax.workspace = true
 regex = "1.13.1"
 schemars = "1.2.3"
 serde = { version = "1.0.229", features = ["derive"] }

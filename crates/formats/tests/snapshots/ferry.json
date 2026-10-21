@@ -1,5 +1,5 @@
 {
-  "format": "dialogue-maker/script",
+  "format": "easyscript/script",
   "version": 1,
   "name": "Ferry",
   "characters": [

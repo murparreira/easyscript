@@ -19,7 +19,7 @@ const CATALOGS: Record<Language, Record<string, string>> = {
   "pt-BR": ptBR,
 };
 
-const KEY = "dialogue-maker:language";
+const KEY = "easyscript:language";
 
 /** The language chosen before, or the system's when it is one there is. */
 function initial(): Language {

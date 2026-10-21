@@ -1,5 +1,5 @@
 <script lang="ts">
-  // What `dialogue-maker check` reports, where it is.
+  // What `easyscript check` reports, where it is.
   import { describe } from "./diagnostics";
   import { t } from "./i18n.svelte";
   import { useReader } from "./reader.svelte";

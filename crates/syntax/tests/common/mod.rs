@@ -1,6 +1,6 @@
 //! Invariants every parse must hold, whatever the input.
 
-use dm_syntax::{AstNode, Parse, SyntaxKind, SyntaxNode, ast::Line, parse};
+use es_syntax::{AstNode, Parse, SyntaxKind, SyntaxNode, ast::Line, parse};
 
 /// Parse `text` and check the tree against it; returns the parse.
 pub fn check(text: &str) -> Parse {

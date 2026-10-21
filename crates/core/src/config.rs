@@ -1,4 +1,4 @@
-//! The project file, `dialogue-maker.toml`: what a project knows about itself that its
+//! The project file, `easyscript.toml`: what a project knows about itself that its
 //! dialogue files cannot say. Every field is optional; an empty file (or none) works.
 //!
 //! Paths of sources, portraits and assets are relative to the project root. Paths of
@@ -12,7 +12,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 /// The project file's name, looked for at the project root.
-pub const FILE_NAME: &str = "dialogue-maker.toml";
+pub const FILE_NAME: &str = "easyscript.toml";
 
 #[derive(Debug, Clone, Default, PartialEq, Deserialize, Serialize)]
 #[serde(default, deny_unknown_fields)]

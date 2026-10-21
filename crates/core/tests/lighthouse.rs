@@ -3,8 +3,8 @@
 
 use std::path::Path;
 
-use dm_core::model::{ArmKeyword, FlagAccess, NodeKind, Segment};
-use dm_core::{Project, check, lower, stats};
+use es_core::model::{ArmKeyword, FlagAccess, NodeKind, Segment};
+use es_core::{Project, check, lower, stats};
 use expect_test::expect;
 
 fn load() -> Project {
@@ -21,10 +21,6 @@ fn checks() {
         .map(ToString::to_string)
         .collect();
     expect![[r#"
-        dialogue-maker.toml:21:38: error[unknown-place-file]: place `tower`: `dialogue/missing.dialogue` is not one of the dialogue files
-        dialogue-maker.toml:22:25: warning[unknown-place-label]: place `tower`: no label `no_such_label` in its files
-        dialogue-maker.toml:35:13: error[missing-portrait]: sailor's portrait `faces/sailor.png` does not exist
-        dialogue-maker.toml:62:9: error[missing-document]: document `docs/missing.md` cannot be read
         dialogue/latin1.dialogue:1:1: error[unreadable-file]: cannot read this file (not UTF-8); it is left alone
         dialogue/pier.dialogue:7:32: error[missing-asset]: `faces/sailor_worried.png` does not exist (1 line)
         dialogue/pier.dialogue:8:1: warning[unknown-speaker]: speaker `Stranger` is no character's (1 line)
@@ -37,7 +33,11 @@ fn checks() {
         dialogue/pier.dialogue:29:1: warning[unknown-speaker]: speaker `Gull` is no character's (1 line)
         dialogue/pier.dialogue:37:3: error[duplicate-label]: `keeper_intro` is already a title in this file
         dialogue/tower.dialogue:7:13: error[syntax]: cannot read `$`
-        docs/walkthrough.md:3:44: error[broken-link]: no label `keeper_goodbye`"#]].assert_eq(&report.join("\n"));
+        docs/walkthrough.md:3:44: error[broken-link]: no label `keeper_goodbye`
+        easyscript.toml:21:38: error[unknown-place-file]: place `tower`: `dialogue/missing.dialogue` is not one of the dialogue files
+        easyscript.toml:22:25: warning[unknown-place-label]: place `tower`: no label `no_such_label` in its files
+        easyscript.toml:35:13: error[missing-portrait]: sailor's portrait `faces/sailor.png` does not exist
+        easyscript.toml:62:9: error[missing-document]: document `docs/missing.md` cannot be read"#]].assert_eq(&report.join("\n"));
 }
 
 #[test]
@@ -200,7 +200,7 @@ fn model_serializes() {
 
 #[test]
 fn read_view() {
-    let view = dm_core::read_view(&load());
+    let view = es_core::read_view(&load());
     assert_eq!(view.title, "Lighthouse");
     // The keeper's portrait has a thumbnail; the sailor's file is missing.
     assert_eq!(
@@ -236,7 +236,7 @@ fn read_view() {
 fn flow() {
     let project = load();
     let script = lower(&project);
-    let flow = dm_core::flow::flow(&project, &script);
+    let flow = es_core::flow::flow(&project, &script);
     let edges: Vec<String> = flow
         .edges
         .iter()

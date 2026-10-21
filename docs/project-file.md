@@ -1,8 +1,8 @@
 # The project file
 
-`dialogue-maker.toml`, at the root of the game's repository, holds what a project knows about itself that its dialogue files cannot say: which files are dialogue, who the speakers are, what the tags mean. Every field is optional. Without the file, dialogue-maker reads every `*.dialogue` outside `addons/` and skips the checks that need it.
+`easyscript.toml`, at the root of the game's repository, holds what a project knows about itself that its dialogue files cannot say: which files are dialogue, who the speakers are, what the tags mean. Every field is optional. Without the file, easyscript reads every `*.dialogue` outside `addons/` and skips the checks that need it.
 
-Longer documents (a walkthrough, review notes) go in a `.dialogue-maker/` folder next to it.
+Longer documents (a walkthrough, review notes) go in a `.easyscript/` folder next to it.
 
 Paths of sources, portraits and assets are relative to the project root. Paths of documents are relative to the project file's own folder. A key the format does not know is an error, so a typo does not go unnoticed.
 
@@ -82,13 +82,13 @@ meanings = { oil_found = "The oil was found in the shed." }
 
 # Markdown documents. `[[label]]` links into the script and is checked.
 [[documents]]
-path = ".dialogue-maker/walkthrough.md"
+path = ".easyscript/walkthrough.md"
 title = "Walkthrough"
 ```
 
 ## Checks
 
-`dialogue-maker check` reports, as `path:line:column: severity[code]: message`:
+`easyscript check` reports, as `path:line:column: severity[code]: message`:
 
 | Code | Severity | What |
 |---|---|---|

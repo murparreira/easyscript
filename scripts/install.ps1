@@ -1,11 +1,11 @@
-# Build dialogue-maker from this source tree and install it for you, in one command, in
+# Build easyscript from this source tree and install it for you, in one command, in
 # PowerShell:
 #
 #   powershell -ExecutionPolicy Bypass -File scripts\install.ps1
 #   powershell -ExecutionPolicy Bypass -File scripts\install.ps1 -NoInstall   (build only)
 #
 # The app is installed for you alone (no administrator), in the Start menu. The command line
-# `dialogue-maker.exe` goes to %LOCALAPPDATA%\dialogue-maker-cli, added to your PATH.
+# `easyscript.exe` goes to %LOCALAPPDATA%\easyscript-cli, added to your PATH.
 #
 # Needs Rust (https://rustup.rs, with the Visual Studio C++ build tools it asks for) and
 # Node 22 (https://nodejs.org); with mise (https://mise.jdx.dev) installed, the script gets
@@ -38,16 +38,16 @@ Run npm @("ci", "--no-audit", "--no-fund")
 
 Say "The command line (a few minutes the first time)"
 Run npm @("run", "build:page")
-Run cargo @("build", "--release", "--locked", "-p", "dm-cli")
+Run cargo @("build", "--release", "--locked", "-p", "es-cli")
 
 Say "The app (a few minutes the first time)"
 Run npm @("run", "tauri", "--", "build", "--bundles", "nsis")
 
 if ($NoInstall) {
   Say "Built"
-  Write-Host "The app:          target\release\dm-app.exe [a game folder]"
+  Write-Host "The app:          target\release\easyscript-app.exe [a game folder]"
   Write-Host "The installer:    target\release\bundle\nsis"
-  Write-Host "The command line: target\release\dialogue-maker.exe"
+  Write-Host "The command line: target\release\easyscript.exe"
   exit 0
 }
 
@@ -58,15 +58,15 @@ if (-not $setup) { Fail "the installer was not built" }
 $process = Start-Process -FilePath $setup.FullName -ArgumentList "/S" -Wait -PassThru
 if ($process.ExitCode -ne 0) { Fail "the installer stopped with code $($process.ExitCode)" }
 
-$bin = Join-Path $env:LOCALAPPDATA "dialogue-maker-cli"
+$bin = Join-Path $env:LOCALAPPDATA "easyscript-cli"
 New-Item -ItemType Directory -Force -Path $bin | Out-Null
-Copy-Item "target\release\dialogue-maker.exe" $bin -Force
+Copy-Item "target\release\easyscript.exe" $bin -Force
 $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
 if (-not $userPath) { $userPath = "" }
 if (($userPath -split ";") -notcontains $bin) {
   [Environment]::SetEnvironmentVariable("Path", (($userPath.TrimEnd(";"), $bin) -join ";").TrimStart(";"), "User")
   Write-Host "Added $bin to your PATH (new terminals see it)."
 }
-Write-Host "The app:          dialogue-maker in the Start menu"
-Write-Host "The command line: dialogue-maker"
+Write-Host "The app:          easyscript in the Start menu"
+Write-Host "The command line: easyscript"
 Say "Done. Run this again to update after pulling new changes."

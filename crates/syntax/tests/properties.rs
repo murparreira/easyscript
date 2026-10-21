@@ -116,10 +116,10 @@ fn deep_nesting_is_capped() {
         .descendants()
         .map(|n| {
             n.ancestors()
-                .filter(|a| a.kind() == dm_syntax::SyntaxKind::BLOCK)
+                .filter(|a| a.kind() == es_syntax::SyntaxKind::BLOCK)
                 .count()
         })
         .max();
     // MAX_DEPTH lines deep: the deepest sits in one block fewer.
-    assert_eq!(deepest, Some(dm_syntax::MAX_DEPTH - 1));
+    assert_eq!(deepest, Some(es_syntax::MAX_DEPTH - 1));
 }

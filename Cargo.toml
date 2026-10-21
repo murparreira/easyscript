@@ -9,10 +9,10 @@ license = "MIT OR Apache-2.0"
 publish = false
 
 [workspace.dependencies]
-dm-syntax = { path = "crates/dm-syntax" }
-dm-core = { path = "crates/core" }
-dm-github = { path = "crates/github" }
-dm-formats = { path = "crates/formats" }
+es-syntax = { path = "crates/syntax" }
+es-core = { path = "crates/core" }
+es-github = { path = "crates/github" }
+es-formats = { path = "crates/formats" }
 
 [workspace.lints.rust]
 unsafe_code = "deny"

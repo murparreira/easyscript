@@ -89,7 +89,7 @@
   const toSend = $derived(standing ? standing.outgoing.length > 0 || (!standing.published && !!standing.branch && !onShared) : false);
   const willOpenPr = $derived(!onShared && !!github.state.repo && !!github.state.account);
   let title = $state(untrack(() => team?.state?.outgoing[0]?.summary ?? status?.head?.replace(/^[0-9a-f]{7} /, "") ?? ""));
-  let body = $state(t("Script changes made with dialogue-maker."));
+  let body = $state(t("Script changes made with easyscript."));
   let sent: Sent | null = $state(null);
   async function send() {
     error = null;

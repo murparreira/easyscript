@@ -10,9 +10,9 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use dm_syntax::AstNode;
-use dm_syntax::SyntaxKind::TITLE_LINE;
-use dm_syntax::ast;
+use es_syntax::AstNode;
+use es_syntax::SyntaxKind::TITLE_LINE;
+use es_syntax::ast;
 use git2::{Commit, Oid, Repository, RepositoryState, Sort, Tree};
 use serde::Serialize;
 use similar::{DiffOp, TextDiff};
@@ -348,7 +348,7 @@ fn scenes_of(path: &str, before: Option<&str>, after: Option<&str>, out: &mut BT
 
 /// Each label's title: the line it is on (from 0), and its name.
 fn titles(text: &str) -> Vec<(usize, String)> {
-    let parse = dm_syntax::parse(text);
+    let parse = es_syntax::parse(text);
     parse
         .syntax()
         .children()
@@ -545,7 +545,7 @@ fn integrate(
             &format!("refs/heads/{branch}"),
             theirs.id(),
             true,
-            &format!("dialogue-maker: bring in {name}"),
+            &format!("easyscript: bring in {name}"),
         )?;
     } else {
         let signature = repo.signature().map_err(|_| {

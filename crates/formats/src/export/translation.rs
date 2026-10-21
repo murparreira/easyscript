@@ -9,8 +9,8 @@
 
 use std::collections::{HashMap, HashSet};
 
-use dm_core::model::{Choice, Line, Node, NodeKind, Span};
-use dm_core::{Project, Script};
+use es_core::model::{Choice, Line, Node, NodeKind, Span};
+use es_core::{Project, Script};
 
 use super::{Source, shown_text};
 

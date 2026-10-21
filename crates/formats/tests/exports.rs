@@ -3,14 +3,14 @@
 
 use std::path::Path;
 
-use dm_core::{Project, Script};
-use dm_formats::export::{Language, fountain, json, translation, voice};
+use es_core::{Project, Script};
+use es_formats::export::{Language, fountain, json, translation, voice};
 use expect_test::expect_file;
 
 fn ferry() -> (Project, Script) {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/ferry");
     let project = Project::load(&root, None).unwrap();
-    let script = dm_core::lower(&project);
+    let script = es_core::lower(&project);
     (project, script)
 }
 
@@ -103,7 +103,7 @@ fn screenplay() {
 fn dialogue_files_as_a_zip() {
     use std::io::Read;
     let (project, _) = ferry();
-    let bytes = dm_formats::export::archive::dialogue_zip(&project, &[]).unwrap();
+    let bytes = es_formats::export::archive::dialogue_zip(&project, &[]).unwrap();
     let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes)).unwrap();
     assert_eq!(zip.len(), project.files.len());
     for file in &project.files {
@@ -114,6 +114,6 @@ fn dialogue_files_as_a_zip() {
             .unwrap();
         assert_eq!(text, file.text, "{} as it is", file.path);
     }
-    let none = dm_formats::export::archive::dialogue_zip(&project, &["elsewhere.dialogue".into()]);
+    let none = es_formats::export::archive::dialogue_zip(&project, &["elsewhere.dialogue".into()]);
     assert!(none.is_err());
 }

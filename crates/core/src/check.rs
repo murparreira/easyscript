@@ -5,7 +5,7 @@ use std::fmt;
 use std::fs;
 use std::path::Path;
 
-use dm_syntax::ast::Line as AstLine;
+use es_syntax::ast::Line as AstLine;
 use regex::Regex;
 use serde::Serialize;
 use ts_rs::TS;

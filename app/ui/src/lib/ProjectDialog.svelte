@@ -10,7 +10,7 @@
 
   const recent: string[] = (() => {
     try {
-      return (JSON.parse(localStorage.getItem("dialogue-maker:recent-projects") ?? "[]") as string[]).filter((p) => p !== path);
+      return (JSON.parse(localStorage.getItem("easyscript:recent-projects") ?? "[]") as string[]).filter((p) => p !== path);
     } catch {
       return [];
     }

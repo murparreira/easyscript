@@ -1,16 +1,16 @@
 # Formats
 
-dialogue-maker writes a project's script in other formats (exports), and turns other tools' scripts into Dialogue Manager files (imports). From the command line:
+easyscript writes a project's script in other formats (exports), and turns other tools' scripts into Dialogue Manager files (imports). From the command line:
 
 ```sh
-dialogue-maker export json        path/to/game -o script.json
-dialogue-maker export translation path/to/game -o translations.csv --locale en --translate-to pt_BR
-dialogue-maker export voice       path/to/game -o voice.md --character keeper
-dialogue-maker export voice-csv   path/to/game -o recording.csv
-dialogue-maker export fountain    path/to/game -o script.fountain
-dialogue-maker export zip         path/to/game -o dialogue.zip
+easyscript export json        path/to/game -o script.json
+easyscript export translation path/to/game -o translations.csv --locale en --translate-to pt_BR
+easyscript export voice       path/to/game -o voice.md --character keeper
+easyscript export voice-csv   path/to/game -o recording.csv
+easyscript export fountain    path/to/game -o script.fountain
+easyscript export zip         path/to/game -o dialogue.zip
 
-dialogue-maker import story.twee -o dialogue/story.dialogue
+easyscript import story.twee -o dialogue/story.dialogue
 ```
 
 Without `-o`, the result goes to standard output (a ZIP needs `-o`). In the app, **Export** and **Import** in the bar do the same.
@@ -27,7 +27,7 @@ The project's `.dialogue` files themselves, at their paths in the project, in a 
 
 The whole script for other tools: a build step, a localisation service, a wiki. Its format is documented and versioned, unlike the app's own view data:
 
-- `format` is always `"dialogue-maker/script"` and `version` is `1`. New fields can appear in any version; the version goes up when a field changes meaning or goes away.
+- `format` is always `"easyscript/script"` and `version` is `1`. New fields can appear in any version; the version goes up when a field changes meaning or goes away.
 - The full description is a JSON Schema: [`script.schema.json`](script.schema.json). It is generated from the Rust types, and a test fails when it is out of date.
 
 At the top: `name`, `characters`, `places`, `flags` (each with its meaning and the labels that set and read it), and `files`. Each file has a `preamble` (what plays before its first label) and its `labels`. Each label has an `id`, its `line` in the file, its `place` and `section`, the comments before it (`notes`), and a `body` of nodes.

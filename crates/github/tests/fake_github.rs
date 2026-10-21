@@ -6,7 +6,7 @@ use std::net::TcpListener;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 
-use dm_github::{GitHub, Repo};
+use es_github::{GitHub, Repo};
 
 /// A request the fake received: method, path, body.
 type Seen = Arc<Mutex<Vec<(String, String, String)>>>;
@@ -395,7 +395,7 @@ fn clone_and_link() {
             .replace("\r\n", "\n"),
         "~ start\nHi.\n"
     );
-    let (url, on_github) = dm_github::origin(&into).unwrap().unwrap();
+    let (url, on_github) = es_github::origin(&into).unwrap().unwrap();
     assert_eq!(url, "https://github.com/team/game.git");
     assert_eq!(on_github, Some(repo.clone()));
 
@@ -426,13 +426,13 @@ fn clone_and_link() {
     assert!(other.exists() && std::fs::read_dir(&other).unwrap().next().is_none());
 
     // Linking: only a repository with no origin.
-    let error = dm_github::link(&into, &repo).unwrap_err();
+    let error = es_github::link(&into, &repo).unwrap_err();
     assert!(error.0.contains("has an `origin` already"), "{error}");
     let plain = dir.path().join("plain");
     Repository::init(&plain).unwrap();
-    dm_github::link(&plain, &repo).unwrap();
-    assert_eq!(dm_github::origin(&plain).unwrap().unwrap().1, Some(repo));
-    let error = dm_github::link(
+    es_github::link(&plain, &repo).unwrap();
+    assert_eq!(es_github::origin(&plain).unwrap().unwrap().1, Some(repo));
+    let error = es_github::link(
         dir.path(),
         &Repo {
             owner: "a".into(),

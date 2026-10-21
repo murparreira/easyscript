@@ -1,5 +1,5 @@
 //! Embed the read view's single-file page, built by `npm run build:page`, when it exists.
-//! Without it the binary still builds; `dialogue-maker build` then says how to get it.
+//! Without it the binary still builds; `easyscript build` then says how to get it.
 
 use std::path::{Path, PathBuf};
 use std::{env, fs};

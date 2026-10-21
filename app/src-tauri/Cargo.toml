@@ -1,18 +1,23 @@
 [package]
-name = "dm-app"
-description = "dialogue-maker desktop app"
+name = "es-app"
+description = "easyscript desktop app"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish.workspace = true
 
+# The command line is `easyscript`; the app, beside it on a PATH, `easyscript-app`.
+[[bin]]
+name = "easyscript-app"
+path = "src/main.rs"
+
 [build-dependencies]
 tauri-build = { version = "2.7.3", features = [] }
 
 [dependencies]
-dm-core.workspace = true
-dm-formats.workspace = true
-dm-github.workspace = true
+es-core.workspace = true
+es-formats.workspace = true
+es-github.workspace = true
 keyring = "4.2.0"
 notify = "8.2.0"
 notify-debouncer-full = "0.7.0"

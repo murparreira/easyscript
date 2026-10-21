@@ -1,13 +1,13 @@
 //! A real project loads, lowers and checks without unreadable text. The project's path
-//! comes from `DIALOGUE_MAKER_PROJECT` (relative to the workspace root) and its project
-//! file, when it is not at the project root, from `DIALOGUE_MAKER_CONFIG`. Without them
+//! comes from `EASYSCRIPT_PROJECT` (relative to the workspace root) and its project
+//! file, when it is not at the project root, from `EASYSCRIPT_CONFIG`. Without them
 //! the test does nothing; CI never has them.
 //!
-//! `cargo test -p dm-core --test real_project -- --nocapture` also prints the counts.
+//! `cargo test -p es-core --test real_project -- --nocapture` also prints the counts.
 
 use std::path::{Path, PathBuf};
 
-use dm_core::{Project, check, lower, stats};
+use es_core::{Project, check, lower, stats};
 
 fn workspace_path(var: &str) -> Option<PathBuf> {
     let value = std::env::var_os(var)?;
@@ -20,11 +20,11 @@ fn workspace_path(var: &str) -> Option<PathBuf> {
 
 #[test]
 fn real_project_checks() {
-    let Some(root) = workspace_path("DIALOGUE_MAKER_PROJECT") else {
-        eprintln!("skipped: DIALOGUE_MAKER_PROJECT is not set");
+    let Some(root) = workspace_path("EASYSCRIPT_PROJECT") else {
+        eprintln!("skipped: EASYSCRIPT_PROJECT is not set");
         return;
     };
-    let config = workspace_path("DIALOGUE_MAKER_CONFIG");
+    let config = workspace_path("EASYSCRIPT_CONFIG");
     let project = Project::load(&root, config.as_deref()).expect("the project loads");
     let script = lower(&project);
     let problems = check(&project, &script);

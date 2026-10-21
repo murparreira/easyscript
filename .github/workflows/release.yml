@@ -53,7 +53,7 @@ jobs:
           tauriScript: npm run tauri
           args: ${{ matrix.args }}
           tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
-          releaseName: dialogue-maker ${{ github.ref_name }}
+          releaseName: easyscript ${{ github.ref_name }}
           releaseDraft: true
           prerelease: true
           uploadWorkflowArtifacts: true
@@ -72,23 +72,23 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # The command line carries the read view's page for `dialogue-maker build`.
+      # The command line carries the read view's page for `easyscript build`.
       - run: npm run build:page
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build --release --locked -p dm-cli
+      - run: cargo build --release --locked -p es-cli
       - name: Package
         shell: bash
         run: |
           # macOS's bash 3.2 has no ${VAR,,}.
-          name="$(echo "dialogue-maker-cli-$RUNNER_OS-$RUNNER_ARCH" | tr '[:upper:]' '[:lower:]')"
+          name="$(echo "easyscript-cli-$RUNNER_OS-$RUNNER_ARCH" | tr '[:upper:]' '[:lower:]')"
           mkdir -p "out/$name"
           cp README.md LICENSE-MIT LICENSE-APACHE "out/$name/"
           if [ "$RUNNER_OS" = "Windows" ]; then
-            cp target/release/dialogue-maker.exe "out/$name/"
+            cp target/release/easyscript.exe "out/$name/"
             (cd out && 7z a "$name.zip" "$name" > /dev/null)
           else
-            cp target/release/dialogue-maker "out/$name/"
+            cp target/release/easyscript "out/$name/"
             tar -C out -czf "out/$name.tar.gz" "$name"
           fi
           rm -r "out/$name"

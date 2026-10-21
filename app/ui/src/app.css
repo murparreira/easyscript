@@ -1,4 +1,4 @@
-/* dialogue-maker: a workbench for game scripts. A bar of views and tools at the top; under
+/* easyscript: a workbench for game scripts. A bar of views and tools at the top; under
    it, writing (scenes, the scene, playing it), the story map, the whole script to read, the
    project file. Dark or light with the system, or as chosen in Settings. System fonts, or
    the project's own (the app is offline). */
@@ -690,6 +690,11 @@ code.path {
 
 .welcome-card {
   width: min(560px, 100%);
+}
+
+.welcome-card .app-icon {
+  display: block;
+  margin: 0 0 14px -6px;
 }
 
 .welcome h1 {

@@ -1,6 +1,6 @@
-//! dialogue-maker on GitHub: signing in (OAuth device flow), the writer's repositories,
+//! easyscript on GitHub: signing in (OAuth device flow), the writer's repositories,
 //! cloning one, the repository a project's `origin` points at, pushing a branch, opening
-//! its pull request. The only part of dialogue-maker that uses the network, and only when
+//! its pull request. The only part of easyscript that uses the network, and only when
 //! the writer asks it to.
 
 use std::fmt;
@@ -11,7 +11,7 @@ use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-/// dialogue-maker's OAuth app on GitHub. Not a secret: the device flow has none.
+/// easyscript's OAuth app on GitHub. Not a secret: the device flow has none.
 pub const CLIENT_ID: &str = "Ov23li9jPpUeZBeyVUIY";
 
 /// The permission asked for: push to the team's repositories, private ones too, and open
@@ -121,7 +121,7 @@ impl GitHub {
         let config = ureq::Agent::config_builder()
             .http_status_as_error(false)
             .timeout_global(Some(Duration::from_secs(30)))
-            .user_agent("dialogue-maker")
+            .user_agent("easyscript")
             .build();
         Self {
             web: web.trim_end_matches('/').to_owned(),
@@ -558,7 +558,7 @@ impl GitHub {
             .fetch(
                 &["+refs/heads/*:refs/remotes/origin/*"],
                 Some(&mut options),
-                Some("dialogue-maker: fetch"),
+                Some("easyscript: fetch"),
             )
             .map_err(|e| GitHubError(format!("cannot reach origin: {}", e.message())))?;
         // Which branch the team shares, when no clone recorded it.
@@ -583,7 +583,7 @@ impl GitHub {
                     "refs/remotes/origin/HEAD",
                     &format!("refs/remotes/origin/{branch}"),
                     true,
-                    "dialogue-maker: origin's default branch",
+                    "easyscript: origin's default branch",
                 )?;
             }
         }
@@ -632,7 +632,7 @@ impl GitHub {
             &format!("refs/remotes/origin/{branch}"),
             head,
             true,
-            "dialogue-maker: push",
+            "easyscript: push",
         )?;
         Ok(())
     }

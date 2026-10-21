@@ -1,7 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <rect width="1024" height="1024" rx="224" fill="#1f2a44"/>
-  <path d="M232 280h560a56 56 0 0 1 56 56v296a56 56 0 0 1-56 56H468l-148 120v-120h-88a56 56 0 0 1-56-56V336a56 56 0 0 1 56-56z" fill="#f4efe6"/>
-  <rect x="292" y="392" width="440" height="40" rx="20" fill="#1f2a44"/>
-  <rect x="292" y="472" width="320" height="40" rx="20" fill="#1f2a44"/>
-  <rect x="292" y="552" width="380" height="40" rx="20" fill="#e2725b"/>
+  <!-- easyscript: a script's page with an E on it, and a book's ribbon. The app's red, paper and ink.
+       Every size in app/src-tauri/icons comes from this: see docs/release.md. -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#b23a35"/>
+  <path d="M 604 770 H 674 V 896 L 639 866 L 604 896 Z" fill="#1d1b18"/>
+  <path d="M 282 196 H 640 L 742 298 V 772 Q 742 796 718 796 H 306 Q 282 796 282 772 V 220 Q 282 196 306 196 Z" fill="#f8f5ee"/>
+  <path d="M 640 196 V 274 Q 640 298 664 298 H 742 Z" fill="#d9cdb6"/>
+  <path transform="translate(362 318) scale(0.98)" d="M 0 0 H 290 V 125 H 252 L 238 62 H 122 V 158 H 212 L 220 118 H 244 V 256 H 220 L 212 216 H 122 V 318 H 252 L 266 252 H 304 V 380 H 0 V 346 H 40 V 34 H 0 Z" fill="#1d1b18"/>
 </svg>

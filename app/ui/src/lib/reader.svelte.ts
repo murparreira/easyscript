@@ -16,7 +16,7 @@ export type VariantChoice = "all" | "true" | "false";
 export type Tab = "write" | "map" | "read" | "project";
 export type Theme = "system" | "light" | "dark";
 
-const PREFS = "dialogue-maker:reader";
+const PREFS = "easyscript:reader";
 
 type Prefs = {
   variants: Record<string, VariantChoice>;

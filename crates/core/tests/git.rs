@@ -4,7 +4,7 @@
 use std::fs;
 use std::path::Path;
 
-use dm_core::git::{self, GitChange};
+use es_core::git::{self, GitChange};
 use git2::{Repository, Signature};
 
 /// A repository with the project in `game/`, a README at its top, all committed.
@@ -104,9 +104,9 @@ fn commits_only_the_projects_files() {
 fn new_and_deleted_files() {
     let (dir, repo) = repo();
     let game = dir.path().join("game");
-    fs::write(game.join("dialogue-maker.toml"), "name = \"Game\"\n").unwrap();
+    fs::write(game.join("easyscript.toml"), "name = \"Game\"\n").unwrap();
     fs::remove_file(game.join("a.dialogue")).unwrap();
-    let paths = vec!["dialogue-maker.toml".to_owned(), "a.dialogue".to_owned()];
+    let paths = vec!["easyscript.toml".to_owned(), "a.dialogue".to_owned()];
     let status = git::status(&game, &paths).unwrap().unwrap();
     let changes: Vec<_> = status
         .files
@@ -117,12 +117,12 @@ fn new_and_deleted_files() {
         changes,
         [
             ("a.dialogue", GitChange::Deleted),
-            ("dialogue-maker.toml", GitChange::Added)
+            ("easyscript.toml", GitChange::Added)
         ]
     );
     git::commit(&game, &paths, "Project file").unwrap();
     assert_eq!(
-        head_file(&repo, "game/dialogue-maker.toml"),
+        head_file(&repo, "game/easyscript.toml"),
         "name = \"Game\"\n"
     );
     assert!(

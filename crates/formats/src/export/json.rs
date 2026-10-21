@@ -4,24 +4,24 @@
 
 use std::collections::BTreeMap;
 
-use dm_core::model::{self, ArmKeyword, JumpTarget, Node as ModelNode, NodeKind};
-use dm_core::{Project, Script};
+use es_core::model::{self, ArmKeyword, JumpTarget, Node as ModelNode, NodeKind};
+use es_core::{Project, Script};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::{Source, plain};
 
 /// The value of `format`.
-pub const FORMAT: &str = "dialogue-maker/script";
+pub const FORMAT: &str = "easyscript/script";
 /// The value of `version`. New fields can appear in any version; it goes up when a field
 /// changes meaning or goes away.
 pub const VERSION: u32 = 1;
 
 /// A project's whole script.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[schemars(title = "dialogue-maker script")]
+#[schemars(title = "easyscript script")]
 pub struct ScriptExport {
-    /// Always `dialogue-maker/script`.
+    /// Always `easyscript/script`.
     pub format: String,
     /// The format's version: 1.
     pub version: u32,

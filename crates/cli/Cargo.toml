@@ -1,19 +1,19 @@
 [package]
-name = "dm-cli"
-description = "dialogue-maker command line: check, stats, build, export"
+name = "es-cli"
+description = "easyscript command line: check, stats, build, export"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish.workspace = true
 
 [[bin]]
-name = "dialogue-maker"
+name = "easyscript"
 path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4.6.7", features = ["derive"] }
-dm-core.workspace = true
-dm-formats.workspace = true
+es-core.workspace = true
+es-formats.workspace = true
 serde_json = "1.0.154"
 
 [lints]

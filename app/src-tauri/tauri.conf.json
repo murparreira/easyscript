@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "dialogue-maker",
-  "identifier": "com.busyboys.dialogue-maker",
+  "productName": "easyscript",
+  "identifier": "com.busyboys.easyscript",
   "build": {
     "beforeDevCommand": "npm run dev -w app/ui",
     "devUrl": "http://localhost:5173",
@@ -11,7 +11,7 @@
   "app": {
     "windows": [
       {
-        "title": "dialogue-maker",
+        "title": "easyscript",
         "width": 1200,
         "height": 800
       }

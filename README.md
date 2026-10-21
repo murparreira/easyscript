@@ -1,8 +1,10 @@
-# dialogue-maker
+<img src="app/icon.svg" width="88" alt="">
 
-Write a game's dialogue where it lives. dialogue-maker opens a Godot game's [Dialogue Manager](https://github.com/nathanhoad/godot_dialogue_manager) files in place, shows the whole script, lets writers write it and play it, and shares the work with the team through git and GitHub. For Mac, Windows and Linux; it works offline.
+# easyscript
 
-The first format is Dialogue Manager 3 `.dialogue` files (Godot 4). *dialogue-maker* is a working name: it can change before the first public release.
+Write a game's dialogue where it lives. easyscript opens a Godot game's [Dialogue Manager](https://github.com/nathanhoad/godot_dialogue_manager) files in place, shows the whole script, lets writers write it and play it, and shares the work with the team through git and GitHub. For Mac, Windows and Linux; it works offline.
+
+The first format is Dialogue Manager 3 `.dialogue` files (Godot 4).
 
 ## What it does
 
@@ -31,8 +33,8 @@ Installers are on the [releases page](https://github.com/murparreira/easyscript/
 | Windows 10 and 11 | `…-setup.exe` or `.msi` | Windows SmartScreen warns about an unknown app: **More info → Run anyway** |
 | macOS (Apple silicon and Intel) | `.dmg` | macOS refuses to open it: **System Settings → Privacy & Security → Open Anyway** |
 | Linux, any distribution | `.AppImage` | Make it executable (`chmod +x`) and run it |
-| Debian, Ubuntu | `.deb` | `sudo apt install ./dialogue-maker_*.deb` |
-| Fedora, openSUSE | `.rpm` | `sudo dnf install ./dialogue-maker-*.rpm` |
+| Debian, Ubuntu | `.deb` | `sudo apt install ./easyscript_*.deb` |
+| Fedora, openSUSE | `.rpm` | `sudo dnf install ./easyscript-*.rpm` |
 
 The warnings come from the installers not being signed yet; [releasing](docs/release.md) says what signing needs.
 
@@ -64,7 +66,7 @@ A game with no dialogue yet starts with its first file. A game with no project f
 ## Documentation
 
 - [Using the app](docs/guide.md): the views, saving, working with the team, export and import, settings, the command line.
-- [The project file](docs/project-file.md), `dialogue-maker.toml`: characters, tags, places, flags, variants.
+- [The project file](docs/project-file.md), `easyscript.toml`: characters, tags, places, flags, variants.
 - [The formats](docs/formats/README.md) it exports and imports.
 - [How writers use it](docs/ux.md): starting, catching up, and working beside others.
 - [Developing](docs/development.md), [releasing](docs/release.md), and [the plan](PLAN.md).

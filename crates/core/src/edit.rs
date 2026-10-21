@@ -12,9 +12,9 @@
 use std::fmt;
 use std::ops::Range;
 
-use dm_syntax::SyntaxKind::{self, *};
-use dm_syntax::ast::{self, Line as AstLine};
-use dm_syntax::{AstNode, SyntaxElement, SyntaxNode};
+use es_syntax::SyntaxKind::{self, *};
+use es_syntax::ast::{self, Line as AstLine};
+use es_syntax::{AstNode, SyntaxElement, SyntaxNode};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -157,7 +157,7 @@ fn fail<T>(message: impl Into<String>) -> Result<T, EditError> {
 
 /// Make an edit to a file's text.
 pub fn apply(text: &str, edit: &Edit) -> Result<Applied, EditError> {
-    let root = dm_syntax::parse(text).syntax();
+    let root = es_syntax::parse(text).syntax();
     match edit {
         Edit::SetText { at, text: words } => set_text(text, &root, *at, words),
         Edit::SetSpeaker { at, speaker } => set_speaker(text, &root, *at, speaker.as_deref()),
@@ -182,7 +182,7 @@ pub fn apply(text: &str, edit: &Edit) -> Result<Applied, EditError> {
                 return Ok(applied);
             }
             for tag in &line.tags {
-                let root = dm_syntax::parse(&applied.text).syntax();
+                let root = es_syntax::parse(&applied.text).syntax();
                 applied = set_tag(
                     &applied.text,
                     &root,
@@ -192,12 +192,12 @@ pub fn apply(text: &str, edit: &Edit) -> Result<Applied, EditError> {
                 )?;
             }
             if line.condition.is_some() {
-                let root = dm_syntax::parse(&applied.text).syntax();
+                let root = es_syntax::parse(&applied.text).syntax();
                 applied =
                     set_condition(&applied.text, &root, applied.at, line.condition.as_deref())?;
             }
             if line.jump.is_some() {
-                let root = dm_syntax::parse(&applied.text).syntax();
+                let root = es_syntax::parse(&applied.text).syntax();
                 applied = set_jump(&applied.text, &root, applied.at, line.jump.as_deref())?;
             }
             Ok(applied)
@@ -276,7 +276,7 @@ pub fn apply(text: &str, edit: &Edit) -> Result<Applied, EditError> {
             )
             .map_err(|_| EditError(format!("`{written}` does not read as a condition here")))?;
             // Its first line, nested under it.
-            let root = dm_syntax::parse(&applied.text).syntax();
+            let root = es_syntax::parse(&applied.text).syntax();
             let body = insert_under(&applied.text, &root, applied.at, line)?;
             Ok(Applied {
                 text: body.text,
@@ -770,7 +770,7 @@ fn place(
             pos + newline.len(),
         )
     };
-    let root = dm_syntax::parse(&out).syntax();
+    let root = es_syntax::parse(&out).syntax();
     let line = line_at(&root, at)?;
     let under = |line: &SyntaxNode| {
         line.parent()
@@ -937,7 +937,7 @@ fn add_label(
             (format!("{text}{lead}{content}"), pos)
         }
     };
-    let new_root = dm_syntax::parse(&out).syntax();
+    let new_root = es_syntax::parse(&out).syntax();
     let title = line_at(&new_root, new_at)?;
     if title.kind() == TITLE_LINE && title_name(&title).as_deref() == Some(id) {
         Ok(Applied {
@@ -951,7 +951,7 @@ fn add_label(
 
 /// The labels a file has, by title.
 pub fn titles(text: &str) -> Vec<String> {
-    dm_syntax::parse(text)
+    es_syntax::parse(text)
         .syntax()
         .children()
         .filter(|n| n.kind() == TITLE_LINE)
@@ -1425,7 +1425,7 @@ impl Summary {
 
 /// Parse the edited file and check the line at `at` with `ok`.
 fn checked(text: &str, at: usize, ok: impl Fn(&Summary) -> bool) -> Result<Applied, EditError> {
-    let root = dm_syntax::parse(text).syntax();
+    let root = es_syntax::parse(text).syntax();
     let line = line_at(&root, at)?;
     if ok(&Summary::of(&line)) {
         Ok(Applied {

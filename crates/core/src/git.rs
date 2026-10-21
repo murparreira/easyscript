@@ -1,5 +1,5 @@
 //! The project's git repository: how its files stand against the last commit, branches,
-//! and commits of the files dialogue-maker works on (dialogue files, the project file, its
+//! and commits of the files easyscript works on (dialogue files, the project file, its
 //! documents). Nothing here commits a file outside those, unstages what the team staged by
 //! hand, or resolves a conflict.
 

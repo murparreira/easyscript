@@ -1,6 +1,6 @@
 [package]
-name = "dm-github"
-description = "dialogue-maker on GitHub: sign-in, push, pull requests"
+name = "es-github"
+description = "easyscript on GitHub: sign-in, push, pull requests"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

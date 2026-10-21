@@ -1,6 +1,6 @@
 //! Each edit on a small script: what the file looks like after it, or why it was refused.
 
-use dm_core::edit::{Edit, NewLine, apply};
+use es_core::edit::{Edit, NewLine, apply};
 use expect_test::{Expect, expect};
 
 const SCRIPT: &str = "\
@@ -28,7 +28,7 @@ fn check(text: &str, n: usize, make: impl Fn(usize) -> Edit, expected: Expect) {
     let shown = match apply(text, &make(line(text, n))) {
         Ok(applied) => {
             assert_eq!(
-                dm_syntax::parse(&applied.text).syntax().to_string(),
+                es_syntax::parse(&applied.text).syntax().to_string(),
                 applied.text
             );
             // Carriage returns shown, so CRLF files can be checked in an LF source file.
@@ -583,7 +583,7 @@ fn insert_a_choice_with_tags_and_condition() {
         choice: true,
         speaker: None,
         text: "Light the lamp".into(),
-        tags: vec![dm_core::edit::NewTag {
+        tags: vec![es_core::edit::NewTag {
             name: "thought".into(),
             value: None,
         }],
@@ -858,7 +858,7 @@ mod random {
     }
 
     fn line_starts(text: &str) -> Vec<(usize, usize)> {
-        dm_syntax::parse(text)
+        es_syntax::parse(text)
             .syntax()
             .descendants()
             .filter(|n| n.kind().is_line())
@@ -880,7 +880,7 @@ mod random {
                 .prop_flat_map(|(t, line)| (Just(t), Just(line), edit(line.0)))
         ) {
             let Ok(applied) = apply(&text, &edit) else { return Ok(()) };
-            prop_assert_eq!(dm_syntax::parse(&applied.text).syntax().to_string(), applied.text.clone());
+            prop_assert_eq!(es_syntax::parse(&applied.text).syntax().to_string(), applied.text.clone());
             let in_line = matches!(edit, Edit::SetText { .. } | Edit::SetSpeaker { .. } | Edit::SetTag { .. } | Edit::RemoveTag { .. } | Edit::SetCondition { .. });
             if in_line {
                 // Before the line and after it (and the lines nested under it), nothing changes.
@@ -1166,7 +1166,7 @@ fn jumps() {
             line: NewLine {
                 choice: true,
                 text: "Run".into(),
-                tags: vec![dm_core::edit::NewTag {
+                tags: vec![es_core::edit::NewTag {
                     name: "thought".into(),
                     value: None,
                 }],

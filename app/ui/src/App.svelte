@@ -1,6 +1,6 @@
 <script lang="ts">
   // The app shell. In the desktop app: open a project folder (or clone one from GitHub),
-  // and follow its files as they change. As a static page (`dialogue-maker build`): read
+  // and follow its files as they change. As a static page (`easyscript build`): read
   // the view embedded in the page.
   import { invoke, isTauri } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
@@ -13,9 +13,10 @@
   import { Editor } from "./lib/editor.svelte";
   import { t } from "./lib/i18n.svelte";
   import Workbench from "./lib/Workbench.svelte";
+  import icon from "../../icon.svg?inline";
 
-  const LAST = "dialogue-maker:last-project";
-  const RECENT = "dialogue-maker:recent-projects";
+  const LAST = "easyscript:last-project";
+  const RECENT = "easyscript:recent-projects";
 
   let view: ReadView | null = $state.raw(embedded());
   let path: string | null = $state(null);
@@ -77,7 +78,7 @@
     if (view) return;
     if (!desktop) {
       if (import.meta.env.DEV) {
-        // `dialogue-maker build --json -o app/ui/dev/view.json` for working on the view in a
+        // `easyscript build --json -o app/ui/dev/view.json` for working on the view in a
         // browser; a `dm-dev-reload` event reads it again, as a change on disk would.
         const load = (file = "view.json") =>
           fetch(`/dev/${file}?${Date.now()}`)
@@ -119,8 +120,9 @@
 {:else}
   <main class="welcome">
     <div class="welcome-card">
+      <img class="app-icon" src={icon} alt="" width="72" height="72" />
       <div class="eyebrow">{t("Script editor")}</div>
-      <h1>dialogue-maker</h1>
+      <h1>easyscript</h1>
       {#if desktop}
         <p class="lede">{t("Write a game's dialogue where it lives. Open the game's folder: the app finds its dialogue files and shows the script. Nothing on disk changes until you save.")}</p>
         <div class="welcome-actions">

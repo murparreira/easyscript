@@ -1,4 +1,4 @@
-# Using dialogue-maker
+# Using easyscript
 
 ## Opening a game
 
@@ -9,7 +9,7 @@ Open a game project's folder (the one with `project.godot`), or **Open from GitH
 - **Map**: labels place by place with the jumps, choices and flags between them, where the game starts them and which nothing reaches; grids of who speaks where and which flags each place sets and reads.
 - **Project**: the project file's builders, a tab each: characters, tags, flags, places, variants; or, for a project with none, a draft from the dialogue.
 
-A game with no dialogue yet starts with its first file and scene, and **+ File** makes another. A game with no project file (`dialogue-maker.toml`) works too: the app guesses who speaks from the lines, and **Set it up** drafts a project file from the dialogue for the Project tab.
+A game with no dialogue yet starts with its first file and scene, and **+ File** makes another. A game with no project file (`easyscript.toml`) works too: the app guesses who speaks from the lines, and **Set it up** drafts a project file from the dialogue for the Project tab.
 
 ## Saving
 
@@ -24,7 +24,7 @@ Edits stay in the app until **Save**: the bar says what is not saved, and shows 
 - **Since you last looked** and **Teammates are working on**: what came in while you were away, and other branches on `origin` with the scenes they change.
 - **Branch** and **GitHub**: make and switch branches; sign in to GitHub, link a repository with no `origin`.
 
-The app checks and sends over SSH with your agent, or over HTTPS with the GitHub sign-in. **Sign in to GitHub** shows a code; GitHub, in your browser, asks you to authorize dialogue-maker and to enter it (GitHub's device flow: no password reaches the app). The app keeps the sign-in in the system's password store (Keychain, Credential Manager, Secret Service), or only until it closes when there is none; revoke it any time in GitHub's settings under Applications. A folder that is not in git has nowhere to send: open the game from GitHub instead. Conflicts git stopped on are shown, never resolved. See [how writers use it](ux.md) for how a writer starts, catches up and works beside others.
+The app checks and sends over SSH with your agent, or over HTTPS with the GitHub sign-in. **Sign in to GitHub** shows a code; GitHub, in your browser, asks you to authorize easyscript and to enter it (GitHub's device flow: no password reaches the app). The app keeps the sign-in in the system's password store (Keychain, Credential Manager, Secret Service), or only until it closes when there is none; revoke it any time in GitHub's settings under Applications. A folder that is not in git has nowhere to send: open the game from GitHub instead. Conflicts git stopped on are shown, never resolved. See [how writers use it](ux.md) for how a writer starts, catches up and works beside others.
 
 ## Export and import
 
@@ -37,13 +37,13 @@ The app's language (English or Portuguese (Brazil); it follows the system's), li
 ## The command line
 
 ```sh
-dialogue-maker check path/to/game     # problems, compiler style; exit 1 on errors
-dialogue-maker stats path/to/game     # labels, lines, choices, speakers, tags
-dialogue-maker build path/to/game -o script.html   # the app's read view as one offline page
-dialogue-maker init path/to/game      # a first dialogue-maker.toml, drafted from the dialogue
-dialogue-maker export translation path/to/game -o translations.csv --translate-to pt_BR
-dialogue-maker export zip path/to/game -o dialogue.zip   # the dialogue files themselves
-dialogue-maker import story.ink -o path/to/game/dialogue/story.dialogue
+easyscript check path/to/game     # problems, compiler style; exit 1 on errors
+easyscript stats path/to/game     # labels, lines, choices, speakers, tags
+easyscript build path/to/game -o script.html   # the app's read view as one offline page
+easyscript init path/to/game      # a first easyscript.toml, drafted from the dialogue
+easyscript export translation path/to/game -o translations.csv --translate-to pt_BR
+easyscript export zip path/to/game -o dialogue.zip   # the dialogue files themselves
+easyscript import story.ink -o path/to/game/dialogue/story.dialogue
 ```
 
-All read `dialogue-maker.toml` at the game's root, or the file given with `--config`. See [the project file](project-file.md).
+All read `easyscript.toml` at the game's root, or the file given with `--config`. See [the project file](project-file.md).

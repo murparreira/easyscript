@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Build dialogue-maker from this source tree and install it for you, in one command:
+# Build easyscript from this source tree and install it for you, in one command:
 #
 #   ./scripts/install.sh            build, then install the app (and the command line)
-#   ./scripts/install.sh --no-install   build only; run it with target/release/dm-app
+#   ./scripts/install.sh --no-install   build only; run it with target/release/easyscript-app
 #
 # macOS: the app goes to ~/Applications. Linux: to ~/.local (a menu entry, and
-# `dialogue-maker-app` on the PATH). The command line `dialogue-maker` goes to ~/.local/bin.
+# `easyscript-app` on the PATH). The command line `easyscript` goes to ~/.local/bin.
 # PREFIX changes where on Linux (default ~/.local).
 #
 # Needs Rust and Node 22: with mise (https://mise.jdx.dev) installed, the script gets both
@@ -74,7 +74,7 @@ npm ci --no-audit --no-fund
 
 bold "The command line (a few minutes the first time)"
 npm run build:page
-cargo build --release --locked -p dm-cli
+cargo build --release --locked -p es-cli
 
 bold "The app (a few minutes the first time)"
 if [ "$os" = Darwin ]; then
@@ -85,40 +85,40 @@ fi
 
 if [ "$install" = 0 ]; then
   bold "Built"
-  echo "The app:          target/release/dm-app [a game folder]"
-  echo "The command line: target/release/dialogue-maker"
+  echo "The app:          target/release/easyscript-app [a game folder]"
+  echo "The command line: target/release/easyscript"
   exit 0
 fi
 
 if [ "$os" = Darwin ]; then
   bold "Installing in ~/Applications"
   mkdir -p "$HOME/Applications" "$HOME/.local/bin"
-  rm -rf "$HOME/Applications/dialogue-maker.app"
-  cp -R target/release/bundle/macos/dialogue-maker.app "$HOME/Applications/"
-  cp target/release/dialogue-maker "$HOME/.local/bin/"
-  echo "The app:          ~/Applications/dialogue-maker.app (in Launchpad and Spotlight)"
-  echo "The command line: ~/.local/bin/dialogue-maker"
+  rm -rf "$HOME/Applications/easyscript.app"
+  cp -R target/release/bundle/macos/easyscript.app "$HOME/Applications/"
+  cp target/release/easyscript "$HOME/.local/bin/"
+  echo "The app:          ~/Applications/easyscript.app (in Launchpad and Spotlight)"
+  echo "The command line: ~/.local/bin/easyscript"
   bin="$HOME/.local/bin"
 else
   prefix="${PREFIX:-$HOME/.local}"
   bold "Installing in $prefix"
   mkdir -p "$prefix/bin" "$prefix/share/applications" "$prefix/share/icons/hicolor/128x128/apps"
-  install -m 755 target/release/dm-app "$prefix/bin/dialogue-maker-app"
-  install -m 755 target/release/dialogue-maker "$prefix/bin/dialogue-maker"
-  install -m 644 app/src-tauri/icons/128x128.png "$prefix/share/icons/hicolor/128x128/apps/dialogue-maker.png"
-  cat >"$prefix/share/applications/dialogue-maker.desktop" <<EOF
+  install -m 755 target/release/easyscript-app "$prefix/bin/easyscript-app"
+  install -m 755 target/release/easyscript "$prefix/bin/easyscript"
+  install -m 644 app/src-tauri/icons/128x128.png "$prefix/share/icons/hicolor/128x128/apps/easyscript.png"
+  cat >"$prefix/share/applications/easyscript.desktop" <<EOF
 [Desktop Entry]
 Type=Application
-Name=dialogue-maker
+Name=easyscript
 Comment=Write a game's dialogue where it lives
-Exec="$prefix/bin/dialogue-maker-app" %f
-Icon=dialogue-maker
+Exec="$prefix/bin/easyscript-app" %f
+Icon=easyscript
 Terminal=false
 Categories=Development;
 EOF
   command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$prefix/share/applications" >/dev/null 2>&1 || true
-  echo "The app:          dialogue-maker in your applications menu, or dialogue-maker-app [a game folder]"
-  echo "The command line: dialogue-maker"
+  echo "The app:          easyscript in your applications menu, or easyscript-app [a game folder]"
+  echo "The command line: easyscript"
   bin="$prefix/bin"
 fi
 case ":$PATH:" in

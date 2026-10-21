@@ -6,8 +6,8 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fmt::Write as _;
 use std::path::Path;
 
-use dm_syntax::SyntaxKind::*;
-use dm_syntax::{SyntaxElement, SyntaxToken};
+use es_syntax::SyntaxKind::*;
+use es_syntax::{SyntaxElement, SyntaxToken};
 use walkdir::WalkDir;
 
 use crate::lower::{lower, unquote};
@@ -26,7 +26,7 @@ pub fn draft(root: &Path) -> Result<String, LoadError> {
 
     writeln!(
         w,
-        "# dialogue-maker project file, drafted by `dialogue-maker init` from the dialogue files."
+        "# easyscript project file, drafted by `easyscript init` from the dialogue files."
     )
     .ok();
     writeln!(
@@ -295,7 +295,7 @@ fn section_header(project: &Project) -> Option<(String, String)> {
     })
 }
 
-fn comments(root: dm_syntax::SyntaxNode) -> impl Iterator<Item = SyntaxToken> {
+fn comments(root: es_syntax::SyntaxNode) -> impl Iterator<Item = SyntaxToken> {
     root.descendants_with_tokens()
         .filter_map(SyntaxElement::into_token)
         .filter(|t| t.kind() == COMMENT && t.parent().is_some_and(|p| p.kind() == COMMENT_LINE))

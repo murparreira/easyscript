@@ -1,5 +1,5 @@
 [package]
-name = "dm-syntax"
+name = "es-syntax"
 description = "Lossless syntax tree for Dialogue Manager .dialogue files"
 version.workspace = true
 edition.workspace = true

@@ -1,6 +1,6 @@
 [package]
-name = "dm-core"
-description = "The dialogue-maker script model, checks and stats"
+name = "es-core"
+description = "The easyscript script model, checks and stats"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -12,7 +12,7 @@ workspace = true
 [dependencies]
 base64 = "0.23.1"
 diffy = "0.5.2"
-dm-syntax.workspace = true
+es-syntax.workspace = true
 git2 = { version = "0.21.0", features = ["vendored-libgit2"] }
 globset = "0.4.20"
 image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "webp", "gif"] }

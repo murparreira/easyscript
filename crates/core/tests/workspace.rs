@@ -4,10 +4,10 @@
 use std::fs;
 use std::path::Path;
 
-use dm_core::edit::Edit;
-use dm_core::project_file::ConfigEdit;
-use dm_core::workspace::DiffKind;
-use dm_core::{SaveError, Workspace};
+use es_core::edit::Edit;
+use es_core::project_file::ConfigEdit;
+use es_core::workspace::DiffKind;
+use es_core::{SaveError, Workspace};
 
 fn project() -> tempfile::TempDir {
     let dir = tempfile::tempdir().expect("temp dir");
@@ -368,21 +368,21 @@ fn the_project_file_is_edited_like_the_dialogue() {
     )
     .unwrap();
     ws.edit_project_file(&[keeper()]).unwrap();
-    assert_eq!(ws.state().changed, ["dialogue-maker.toml", "a.dialogue"]);
+    assert_eq!(ws.state().changed, ["easyscript.toml", "a.dialogue"]);
     assert_eq!(ws.project().config.characters[0].name, "The Keeper");
     assert!(ws.project().files[0].text.contains("Uno."));
     assert!(
-        !dir.path().join("dialogue-maker.toml").exists(),
+        !dir.path().join("easyscript.toml").exists(),
         "nothing written yet"
     );
 
     ws.undo();
     assert!(ws.project().config.characters.is_empty());
     ws.redo();
-    assert_eq!(ws.diffs()[0].path, "dialogue-maker.toml");
+    assert_eq!(ws.diffs()[0].path, "easyscript.toml");
 
-    assert_eq!(ws.save().unwrap(), ["dialogue-maker.toml", "a.dialogue"]);
-    assert!(read(dir.path(), "dialogue-maker.toml").contains("name = \"The Keeper\""));
+    assert_eq!(ws.save().unwrap(), ["easyscript.toml", "a.dialogue"]);
+    assert!(read(dir.path(), "easyscript.toml").contains("name = \"The Keeper\""));
     assert!(ws.state().has_project_file && ws.state().changed.is_empty());
 }
 
@@ -401,15 +401,15 @@ fn a_new_project_file_is_not_written_over_one_that_appeared() {
     );
     assert!(ws.draft_project_file().is_err(), "only once");
     fs::write(
-        dir.path().join("dialogue-maker.toml"),
+        dir.path().join("easyscript.toml"),
         "name = \"Someone else's\"\n",
     )
     .unwrap();
     assert!(
-        matches!(ws.save(), Err(SaveError::ChangedOnDisk(paths)) if paths == ["dialogue-maker.toml"])
+        matches!(ws.save(), Err(SaveError::ChangedOnDisk(paths)) if paths == ["easyscript.toml"])
     );
     assert_eq!(
-        read(dir.path(), "dialogue-maker.toml"),
+        read(dir.path(), "easyscript.toml"),
         "name = \"Someone else's\"\n"
     );
 }
@@ -417,15 +417,15 @@ fn a_new_project_file_is_not_written_over_one_that_appeared() {
 #[test]
 fn refresh_takes_a_project_file_changed_on_disk_when_not_edited() {
     let dir = project();
-    fs::write(dir.path().join("dialogue-maker.toml"), "name = \"One\"\n").unwrap();
+    fs::write(dir.path().join("easyscript.toml"), "name = \"One\"\n").unwrap();
     let mut ws = Workspace::open(dir.path(), None).unwrap();
-    fs::write(dir.path().join("dialogue-maker.toml"), "name = \"Two\"\n").unwrap();
+    fs::write(dir.path().join("easyscript.toml"), "name = \"Two\"\n").unwrap();
     ws.refresh().unwrap();
     assert_eq!(ws.project().config.name.as_deref(), Some("Two"));
     ws.edit_project_file(&[keeper()]).unwrap();
-    fs::write(dir.path().join("dialogue-maker.toml"), "name = \"Three\"\n").unwrap();
+    fs::write(dir.path().join("easyscript.toml"), "name = \"Three\"\n").unwrap();
     ws.refresh().unwrap();
-    assert_eq!(ws.state().conflicts, ["dialogue-maker.toml"]);
+    assert_eq!(ws.state().conflicts, ["easyscript.toml"]);
     assert_eq!(
         ws.project().config.name.as_deref(),
         Some("Two"),

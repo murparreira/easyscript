@@ -1160,97 +1160,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dm-app"
-version = "0.1.0"
-dependencies = [
- "dm-core",
- "dm-formats",
- "dm-github",
- "git2",
- "keyring",
- "notify",
- "notify-debouncer-full",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-opener",
- "tempfile",
-]
-
-[[package]]
-name = "dm-cli"
-version = "0.1.0"
-dependencies = [
- "clap",
- "dm-core",
- "dm-formats",
- "serde_json",
-]
-
-[[package]]
-name = "dm-core"
-version = "0.1.0"
-dependencies = [
- "base64 0.23.1",
- "diffy",
- "dm-syntax",
- "expect-test",
- "git2",
- "globset",
- "image",
- "proptest",
- "regex",
- "serde",
- "serde_json",
- "similar",
- "tempfile",
- "toml 1.1.8+spec-1.1.0",
- "toml_edit 0.25.17+spec-1.1.0",
- "ts-rs",
- "walkdir",
-]
-
-[[package]]
-name = "dm-formats"
-version = "0.1.0"
-dependencies = [
- "csv",
- "dm-core",
- "dm-syntax",
- "expect-test",
- "regex",
- "schemars 1.2.3",
- "serde",
- "serde_json",
- "tempfile",
- "ts-rs",
- "zip",
-]
-
-[[package]]
-name = "dm-github"
-version = "0.1.0"
-dependencies = [
- "git2",
- "serde",
- "serde_json",
- "tempfile",
- "ts-rs",
- "ureq",
-]
-
-[[package]]
-name = "dm-syntax"
-version = "0.1.0"
-dependencies = [
- "expect-test",
- "proptest",
- "rowan",
-]
-
-[[package]]
 name = "document-features"
 version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1382,6 +1291,97 @@ checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "es-app"
+version = "0.1.0"
+dependencies = [
+ "es-core",
+ "es-formats",
+ "es-github",
+ "git2",
+ "keyring",
+ "notify",
+ "notify-debouncer-full",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-opener",
+ "tempfile",
+]
+
+[[package]]
+name = "es-cli"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "es-core",
+ "es-formats",
+ "serde_json",
+]
+
+[[package]]
+name = "es-core"
+version = "0.1.0"
+dependencies = [
+ "base64 0.23.1",
+ "diffy",
+ "es-syntax",
+ "expect-test",
+ "git2",
+ "globset",
+ "image",
+ "proptest",
+ "regex",
+ "serde",
+ "serde_json",
+ "similar",
+ "tempfile",
+ "toml 1.1.8+spec-1.1.0",
+ "toml_edit 0.25.17+spec-1.1.0",
+ "ts-rs",
+ "walkdir",
+]
+
+[[package]]
+name = "es-formats"
+version = "0.1.0"
+dependencies = [
+ "csv",
+ "es-core",
+ "es-syntax",
+ "expect-test",
+ "regex",
+ "schemars 1.2.3",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "ts-rs",
+ "zip",
+]
+
+[[package]]
+name = "es-github"
+version = "0.1.0"
+dependencies = [
+ "git2",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "ts-rs",
+ "ureq",
+]
+
+[[package]]
+name = "es-syntax"
+version = "0.1.0"
+dependencies = [
+ "expect-test",
+ "proptest",
+ "rowan",
 ]
 
 [[package]]

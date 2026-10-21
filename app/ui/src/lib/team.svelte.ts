@@ -18,9 +18,9 @@ import { fileName } from "./model";
 
 export type Sent = { branch: string; pull_request: PullRequest | null };
 
-const AUTO = "dialogue-maker:team-auto";
-const SEEN = "dialogue-maker:seen:";
-const ACK = "dialogue-maker:seen-scenes:";
+const AUTO = "easyscript:team-auto";
+const SEEN = "easyscript:seen:";
+const ACK = "easyscript:seen-scenes:";
 /** How often origin is asked, and at least how long apart when the window comes back. */
 const EVERY = 3 * 60_000;
 const AGAIN = 60_000;

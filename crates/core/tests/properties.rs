@@ -3,7 +3,7 @@
 
 use std::path::Path;
 
-use dm_core::{Project, SourceFile, check, lower, stats};
+use es_core::{Project, SourceFile, check, lower, stats};
 use proptest::prelude::*;
 
 const FRAGMENTS: &[&str] = &[

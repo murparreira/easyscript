@@ -182,7 +182,7 @@ impl Workspace {
         &self.root
     }
 
-    /// The files dialogue-maker works on, relative to the project root: the dialogue files,
+    /// The files easyscript works on, relative to the project root: the dialogue files,
     /// the project file and its documents (those inside the project).
     pub fn owned_paths(&self) -> Vec<String> {
         let mut paths: Vec<String> = self.project.files.iter().map(|f| f.path.clone()).collect();

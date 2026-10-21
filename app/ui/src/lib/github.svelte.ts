@@ -1,5 +1,5 @@
 // GitHub, in the app: who is signed in, the open project's repository on it, signing in
-// (GitHub's device flow: the browser asks the writer to authorize dialogue-maker). Shared
+// (GitHub's device flow: the browser asks the writer to authorize easyscript). Shared
 // by the welcome screen and the share panel.
 
 import { invoke } from "@tauri-apps/api/core";

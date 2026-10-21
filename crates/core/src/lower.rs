@@ -7,9 +7,9 @@
 
 use std::mem;
 
-use dm_syntax::SyntaxKind::*;
-use dm_syntax::ast::{self, Line as AstLine};
-use dm_syntax::{AstNode, SyntaxElement, SyntaxNode, SyntaxToken};
+use es_syntax::SyntaxKind::*;
+use es_syntax::ast::{self, Line as AstLine};
+use es_syntax::{AstNode, SyntaxElement, SyntaxNode, SyntaxToken};
 
 use crate::config::{Compiled, Config};
 use crate::model::*;

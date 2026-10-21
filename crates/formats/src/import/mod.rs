@@ -72,7 +72,7 @@ pub fn import(source: Source, text: &str) -> Imported {
         Source::Ink => ink::convert(text),
         Source::Dialogue => Imported {
             text: text.to_owned(),
-            warnings: dm_syntax::parse(text)
+            warnings: es_syntax::parse(text)
                 .errors()
                 .map(|token| Warning {
                     line: text[..usize::from(token.text_range().start())]

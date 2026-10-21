@@ -43,7 +43,7 @@
   const sinceCount = $derived(team?.since.size ?? 0);
 
   // A project with no project file: say what one gives, once.
-  const SETUP = `dialogue-maker:setup-later:${reader.view.title}`;
+  const SETUP = `easyscript:setup-later:${reader.view.title}`;
   let later = $state((() => {
     try {
       return localStorage.getItem(SETUP) === "1";

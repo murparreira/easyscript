@@ -1,5 +1,5 @@
 //! A project's script in other formats. Each takes the project (for its files and project
-//! file) and its script (see [`dm_core::lower`]), and returns the text to write.
+//! file) and its script (see [`es_core::lower`]), and returns the text to write.
 
 pub mod archive;
 pub mod fountain;
@@ -10,9 +10,9 @@ mod words;
 
 pub use words::Language;
 
-use dm_core::config::Character;
-use dm_core::model::{Line, Segment, Span, Tag};
-use dm_core::{Project, Script};
+use es_core::config::Character;
+use es_core::model::{Line, Segment, Span, Tag};
+use es_core::{Project, Script};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
