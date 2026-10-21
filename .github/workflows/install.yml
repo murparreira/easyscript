@@ -1,0 +1,57 @@
+name: Install from source
+
+# The one-command install scripts, on the three systems: build, install, and the installed
+# command line reads a project.
+on:
+  push:
+    branches: [main]
+    paths: ["scripts/**", ".github/workflows/install.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unix:
+    name: install.sh (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # Without them the script stops and names this command.
+      - name: WebKitGTK and the other libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+      - run: ./scripts/install.sh
+      - name: Installed
+        run: |
+          if [ "$RUNNER_OS" = macOS ]; then test -d "$HOME/Applications/dialogue-maker.app"; else test -x "$HOME/.local/bin/dialogue-maker-app" && test -f "$HOME/.local/share/applications/dialogue-maker.desktop"; fi
+          "$HOME/.local/bin/dialogue-maker" stats crates/core/tests/fixtures/lighthouse
+
+  windows:
+    name: install.ps1 (windows-latest)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: powershell -ExecutionPolicy Bypass -File scripts\install.ps1
+      - name: Installed
+        shell: pwsh
+        run: |
+          Get-ChildItem $env:LOCALAPPDATA -Filter "dialogue-maker*.exe" -Recurse -Depth 2 | ForEach-Object FullName
+          & "$env:LOCALAPPDATA\dialogue-maker-cli\dialogue-maker.exe" stats crates/core/tests/fixtures/lighthouse
+          if ($LASTEXITCODE -ne 0) { exit 1 }

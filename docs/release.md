@@ -4,9 +4,10 @@ What a public release of dialogue-maker needs, what is done, and what only the t
 
 ## Done
 
-- Installers for Linux, macOS and Windows, and the command line, from the release workflow (`.github/workflows/release.yml`): a `v*` tag makes a draft release. Not signed yet.
+- Installers for Linux (AppImage, `.deb`, `.rpm`), macOS (one `.dmg` for Apple silicon and Intel) and Windows (`-setup.exe`, `.msi`), and the command line for each, from the release workflow (`.github/workflows/release.yml`). A `v*` tag makes a draft release; running the workflow by hand builds the same as workflow artifacts. Not signed yet.
+- Building from source in one command: `scripts/install.sh` (macOS, Linux) and `scripts/install.ps1` (Windows) build the app and the command line and install them for the user, without an administrator.
 - The app in English and Portuguese (Brazil), following the system's language, with a menu to change it. The checks' messages too; exports write their own words in either.
-- Documents: [the README](../README.md), [the project file](project-file.md), [the formats](formats/README.md).
+- Documents: [the README](../README.md), [the guide](guide.md), [the project file](project-file.md), [the formats](formats/README.md), [developing](development.md).
 - MIT OR Apache-2.0 (`LICENSE-MIT`, `LICENSE-APACHE`).
 
 ## The public name

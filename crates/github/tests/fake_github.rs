@@ -373,7 +373,9 @@ fn clone_and_link() {
 
     let mut github = GitHub::default();
     // Over file://, so the clone reports its progress as a download does.
-    github.git = format!("file://{}", hub.to_str().unwrap());
+    // `file:///C:/...` on Windows, `file:///tmp/...` elsewhere.
+    let hub_path = hub.to_str().unwrap().replace('\\', "/");
+    github.git = format!("file:///{}", hub_path.trim_start_matches('/'));
     let repo = Repo {
         owner: "team".into(),
         name: "game".into(),

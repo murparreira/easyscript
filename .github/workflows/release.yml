@@ -20,7 +20,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-22.04
+            args: ""
+          # One app for Apple silicon and Intel Macs.
+          - os: macos-latest
+            args: --target universal-apple-darwin
+            targets: aarch64-apple-darwin,x86_64-apple-darwin
+          - os: windows-latest
+            args: ""
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
@@ -29,6 +37,8 @@ jobs:
           node-version: 22
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.targets }}
       - uses: Swatinem/rust-cache@v2
       - name: Install Tauri system dependencies
         if: runner.os == 'Linux'
@@ -41,6 +51,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tauriScript: npm run tauri
+          args: ${{ matrix.args }}
           tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
           releaseName: dialogue-maker ${{ github.ref_name }}
           releaseDraft: true

@@ -19,7 +19,12 @@ struct Team {
 fn team() -> Team {
     let dir = tempfile::tempdir().unwrap();
     let seed = dir.path().join("seed");
-    let repo = Repository::init(&seed).unwrap();
+    // `main` whatever git's default is on this machine.
+    let repo = Repository::init_opts(
+        &seed,
+        git2::RepositoryInitOptions::new().initial_head("main"),
+    )
+    .unwrap();
     fs::write(seed.join("talk.dialogue"), SCRIPT).unwrap();
     fs::write(seed.join("code.gd"), "extends Node\n").unwrap();
     commit_all(&repo, "Murillo", "The script");

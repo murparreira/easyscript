@@ -58,6 +58,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # macOS and Windows do not tell `Reader.svelte` from `reader.svelte.ts`.
+      - name: No two files differ only in case
+        run: test -z "$(git ls-files | tr '[:upper:]' '[:lower:]' | sort | uniq -d)"
       - name: Type-check
         run: npm run check
       - name: Test
