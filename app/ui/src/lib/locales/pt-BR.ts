@@ -494,7 +494,6 @@ const ptBR: Record<string, string> = {
   "Only the game knows; your answer is remembered until you reset the story state.": "Só o jogo sabe; a sua resposta fica guardada até você zerar o estado da história.",
   "Which one is it?": "Qual é?",
   "Play again": "Jogar de novo",
-  "In the game's fonts (from the project file)": "Nas fontes do jogo (do arquivo de projeto)",
 };
 
 export default ptBR;

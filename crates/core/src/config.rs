@@ -36,7 +36,6 @@ pub struct Config {
     pub flags: Flags,
     pub documents: Vec<Document>,
     pub checks: Checks,
-    pub look: Look,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -165,16 +164,6 @@ pub struct Document {
     /// A Markdown file, relative to the project file. `[[label]]` links into the script.
     pub path: String,
     pub title: Option<String>,
-}
-
-/// How the app shows the script: the game's own fonts, so lines read as they will in it.
-#[derive(Debug, Clone, Default, PartialEq, Deserialize, Serialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct Look {
-    /// A font file (`.ttf`, `.otf`, `.woff2`) for titles: the project's name, scenes.
-    pub title_font: Option<String>,
-    /// A font file for what is said: lines, choices, balloons.
-    pub speech_font: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Deserialize, Serialize)]

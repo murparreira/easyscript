@@ -249,26 +249,3 @@ fn flow() {
     .assert_eq(&edges.join("\n"));
     expect!["0:keeper_intro 0:gull_1 0:storm_night 1:tower_top"].assert_eq(&flow.entries.join(" "));
 }
-
-#[test]
-fn the_project_fonts_reach_the_view() {
-    let dir = tempfile::tempdir().unwrap();
-    let root = dir.path();
-    std::fs::write(root.join("a.dialogue"), "~ start\nKeeper: Hi.\n").unwrap();
-    std::fs::create_dir(root.join("fonts")).unwrap();
-    // The first bytes of a TrueType font are enough to say what it is.
-    std::fs::write(root.join("fonts/title.ttf"), [0, 1, 0, 0, 7, 7]).unwrap();
-    std::fs::write(root.join("fonts/notes.txt"), "not a font").unwrap();
-    std::fs::write(
-        root.join("dialogue-maker.toml"),
-        "[look]\ntitle_font = \"fonts/title.ttf\"\nspeech_font = \"fonts/notes.txt\"\n",
-    )
-    .unwrap();
-    let project = Project::load(root, None).unwrap();
-    let view = dm_core::view::read_view(&project);
-    assert_eq!(
-        view.fonts.title.as_deref(),
-        Some("data:font/ttf;base64,AAEAAAcH")
-    );
-    assert_eq!(view.fonts.speech, None, "not a font: left out");
-}

@@ -33,8 +33,6 @@ pub struct ReadView {
     pub documents: Vec<DocumentView>,
     /// Small versions of faces and portraits, by their path in the project, as data URIs.
     pub images: BTreeMap<String, String>,
-    /// The project's fonts, as data URIs.
-    pub fonts: Fonts,
     pub stats: Stats,
     pub problems: Vec<Diagnostic>,
     /// How the story moves between labels.
@@ -249,18 +247,6 @@ fn build(project: &Project, editing: bool) -> ReadView {
             })
             .collect(),
         images,
-        fonts: Fonts {
-            title: config
-                .look
-                .title_font
-                .as_deref()
-                .and_then(|p| font(&project.resolve(p))),
-            speech: config
-                .look
-                .speech_font
-                .as_deref()
-                .and_then(|p| font(&project.resolve(p))),
-        },
         stats,
         problems,
         flow: flow(project, &script),
@@ -377,34 +363,6 @@ fn asset_values(project: &Project, pattern: &str) -> Vec<String> {
 }
 
 /// A small JPEG of an image, on white, as a data URI. None when it does not read.
-/// The project's fonts (from `[look]`), as data URIs.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, TS)]
-#[ts(export)]
-pub struct Fonts {
-    pub title: Option<String>,
-    pub speech: Option<String>,
-}
-
-/// Fonts bigger than this are left out: the view is sent whole on every edit.
-const MAX_FONT: u64 = 2 * 1024 * 1024;
-
-/// A font file as a data URI; none when it is missing, too big, or not a font.
-fn font(path: &Path) -> Option<String> {
-    if std::fs::metadata(path).ok()?.len() > MAX_FONT {
-        return None;
-    }
-    let bytes = std::fs::read(path).ok()?;
-    let kind = match bytes.get(..4)? {
-        [0, 1, 0, 0] | b"true" => "font/ttf",
-        b"OTTO" => "font/otf",
-        b"wOF2" => "font/woff2",
-        b"wOFF" => "font/woff",
-        _ => return None,
-    };
-    let data = base64::engine::general_purpose::STANDARD.encode(bytes);
-    Some(format!("data:{kind};base64,{data}"))
-}
-
 pub fn thumbnail(path: &Path) -> Option<String> {
     let image = image::ImageReader::open(path)
         .ok()?

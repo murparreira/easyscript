@@ -84,13 +84,6 @@ meanings = { oil_found = "The oil was found in the shed." }
 [[documents]]
 path = ".dialogue-maker/walkthrough.md"
 title = "Walkthrough"
-
-# The game's fonts, so the app shows the script as the game does: titles in one, what
-# is said (lines, choices, balloons) in the other. `.ttf`, `.otf`, `.woff` or `.woff2`,
-# up to 2 MB each.
-[look]
-title_font = "fonts/Display.ttf"
-speech_font = "fonts/Speech.ttf"
 ```
 
 ## Checks

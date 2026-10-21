@@ -37,7 +37,7 @@ Edits stay in the app until **Save**: the bar says what is not saved, and shows 
 
 **Export** has the dialogue files for the game first: each file's status and a look at it, saved in place, or as a ZIP that keeps the game's folders (it unzips over the project). Then the script for others: Dialogue Manager's translation table (exporting over a table keeps its translations), voice scripts and recording sheets by character and mood, a Fountain screenplay, and JSON for other tools (a documented format). **Import** turns a Twine (`.twee`), Yarn Spinner (`.yarn`) or Ink (`.ink`) script, or a `.dialogue` file from elsewhere, into a new file in the project, after showing it and what did not convert. See [the formats](docs/formats/README.md).
 
-**Settings**: the app's language (English or Portuguese (Brazil); it follows the system's), light or dark (or like the system), and what the script shows. A project file can name the game's fonts (`[look]`), so the script reads as it does in the game; the app's own controls keep the system's font. Voice scripts, recording sheets and screenplays are written with their own words (headings, stage directions) in the app's language (`--language pt-BR` on the command line). The command line and import warnings are in English for now.
+**Settings**: the app's language (English or Portuguese (Brazil); it follows the system's), light or dark (or like the system), and what the script shows. Voice scripts, recording sheets and screenplays are written with their own words (headings, stage directions) in the app's language (`--language pt-BR` on the command line). The command line and import warnings are in English for now.
 
 The command line:
 

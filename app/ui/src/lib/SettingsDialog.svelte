@@ -33,9 +33,6 @@
       <span class="k">{t("The script shows")}</span>
       <label class="tog"><input type="checkbox" bind:checked={reader.showIds} /> {t("Ids, tags and file names")}</label>
       <label class="tog"><input type="checkbox" bind:checked={reader.showMarks} /> {t("Lines with authorship marks, highlighted")}</label>
-      {#if reader.view.fonts.title || reader.view.fonts.speech}
-        <label class="tog"><input type="checkbox" bind:checked={reader.gameFonts} /> {t("In the game's fonts (from the project file)")}</label>
-      {/if}
     </div>
     {#if openOther}
       <div class="field">

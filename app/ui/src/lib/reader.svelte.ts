@@ -24,7 +24,6 @@ type Prefs = {
   showMarks: boolean;
   theme: Theme;
   playOpen: boolean;
-  gameFonts: boolean;
 };
 
 function loadPrefs(): Partial<Prefs> {
@@ -42,8 +41,6 @@ export class Reader {
   showIds = $state(true);
   showMarks = $state(false);
   theme: Theme = $state("system");
-  /** The script in the game's fonts, when the project file names some. */
-  gameFonts = $state(true);
   /** The play panel beside the scene being written. */
   playOpen = $state(true);
   /** Editing is possible (the desktop app); the static page reads. */
@@ -103,7 +100,6 @@ export class Reader {
     this.showMarks = prefs.showMarks ?? false;
     this.theme = prefs.theme ?? "system";
     this.playOpen = prefs.playOpen ?? true;
-    this.gameFonts = prefs.gameFonts ?? true;
     $effect.root(() => {
       $effect(() => {
         const prefs: Prefs = {
@@ -112,7 +108,6 @@ export class Reader {
           showMarks: this.showMarks,
           theme: this.theme,
           playOpen: this.playOpen,
-          gameFonts: this.gameFonts,
         };
         try {
           localStorage.setItem(PREFS, JSON.stringify(prefs));
