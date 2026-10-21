@@ -1,72 +1,66 @@
-# Build easyscript from this source tree and install it for you, in one command, in
-# PowerShell:
+# Install easyscript, the app and its command line, from the latest release on GitHub. For
+# you alone: no administrator, and nothing to install first. In PowerShell:
 #
-#   powershell -ExecutionPolicy Bypass -File scripts\install.ps1
-#   powershell -ExecutionPolicy Bypass -File scripts\install.ps1 -NoInstall   (build only)
+#   irm https://raw.githubusercontent.com/murparreira/easyscript/main/scripts/install.ps1 | iex
 #
-# The app is installed for you alone (no administrator), in the Start menu. The command line
-# `easyscript.exe` goes to %LOCALAPPDATA%\easyscript-cli, added to your PATH.
-#
-# Needs Rust (https://rustup.rs, with the Visual Studio C++ build tools it asks for) and
-# Node 22 (https://nodejs.org); with mise (https://mise.jdx.dev) installed, the script gets
-# both itself. WebView2 comes with Windows 10 and 11.
-param([switch]$NoInstall)
+# Run it again to update. The app goes in the Start menu; the command line `easyscript` to
+# %LOCALAPPDATA%\easyscript-cli, added to your PATH. $env:EASYSCRIPT_VERSION = "v0.1.0"
+# picks a release instead of the latest.
 $ErrorActionPreference = "Stop"
-Set-Location (Join-Path $PSScriptRoot "..")
+$ProgressPreference = "SilentlyContinue"
+# GitHub speaks TLS 1.2; Windows PowerShell 5 may not offer it by default.
+[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+
+$repo = if ($env:EASYSCRIPT_REPO) { $env:EASYSCRIPT_REPO } else { "murparreira/easyscript" }
+$api = if ($env:EASYSCRIPT_API) { $env:EASYSCRIPT_API } else { "https://api.github.com" }
 
 function Say($text) { Write-Host "`n$text" -ForegroundColor White }
-function Fail($text) { Write-Host "`nerror: $text" -ForegroundColor Red; exit 1 }
-function Run($command, [string[]]$arguments) {
-  & $command @arguments
-  if ($LASTEXITCODE -ne 0) { Fail "$command $($arguments -join ' ') failed" }
+function Fail($text) { Write-Host "`nerror: $text" -ForegroundColor Red; throw $text }
+
+if (-not [Environment]::Is64BitOperatingSystem) { Fail "easyscript needs 64-bit Windows" }
+
+Say "Finding the release"
+$query = if ($env:EASYSCRIPT_VERSION) { "$api/repos/$repo/releases/tags/$($env:EASYSCRIPT_VERSION)" } else { "$api/repos/$repo/releases?per_page=1" }
+try {
+  $release = @(Invoke-RestMethod -Uri $query -Headers @{ Accept = "application/vnd.github+json" })[0]
+} catch {
+  Fail "cannot reach GitHub to find the release ($query)"
 }
-
-# Rust and Node: from mise when it is there (mise.toml pins them), else from the PATH.
-if (Get-Command mise -ErrorAction SilentlyContinue) {
-  Say "Rust and Node, with mise"
-  mise trust --quiet (Join-Path $PWD "mise.toml") 2>$null
-  Run mise @("install")
-  mise env --shell pwsh | Out-String | Invoke-Expression
+if (-not $release) { Fail "no release of $repo has files to install yet" }
+function Pick($pattern, $what) {
+  $asset = $release.assets | Where-Object { $_.name -match $pattern } | Select-Object -First 1
+  if (-not $asset) { Fail "the release $($release.tag_name) has no $what" }
+  $asset.browser_download_url
 }
-if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) { Fail "Rust is missing. Install it from https://rustup.rs, or install mise (https://mise.jdx.dev) and run this again." }
-if (-not (Get-Command npm -ErrorAction SilentlyContinue)) { Fail "Node is missing. Install Node 22 from https://nodejs.org, or install mise (https://mise.jdx.dev) and run this again." }
-$nodeMajor = [int](node -p "process.versions.node.split('.')[0]")
-if ($nodeMajor -lt 20) { Fail "Node $nodeMajor is too old: Node 22 is needed." }
+$appUrl = Pick "_x64-setup\.exe$" "installer for Windows"
+$cliUrl = Pick "easyscript-cli-windows-x64\.zip$" "command line for Windows"
 
-Say "JavaScript packages"
-Run npm @("ci", "--no-audit", "--no-fund")
+$tmp = Join-Path ([IO.Path]::GetTempPath()) ("easyscript-" + [Guid]::NewGuid())
+New-Item -ItemType Directory -Path $tmp | Out-Null
+try {
+  Say "Downloading easyscript $($release.tag_name)"
+  Invoke-WebRequest -Uri $appUrl -OutFile (Join-Path $tmp "setup.exe")
+  Invoke-WebRequest -Uri $cliUrl -OutFile (Join-Path $tmp "cli.zip")
 
-Say "The command line (a few minutes the first time)"
-Run npm @("run", "build:page")
-Run cargo @("build", "--release", "--locked", "-p", "es-cli")
+  Say "Installing"
+  # The installer is per user; /S installs without asking.
+  $process = Start-Process -FilePath (Join-Path $tmp "setup.exe") -ArgumentList "/S" -Wait -PassThru
+  if ($process.ExitCode -ne 0) { Fail "the installer stopped with code $($process.ExitCode)" }
 
-Say "The app (a few minutes the first time)"
-Run npm @("run", "tauri", "--", "build", "--bundles", "nsis")
-
-if ($NoInstall) {
-  Say "Built"
-  Write-Host "The app:          target\release\easyscript-app.exe [a game folder]"
-  Write-Host "The installer:    target\release\bundle\nsis"
-  Write-Host "The command line: target\release\easyscript.exe"
-  exit 0
+  Expand-Archive -Path (Join-Path $tmp "cli.zip") -DestinationPath $tmp -Force
+  $bin = Join-Path $env:LOCALAPPDATA "easyscript-cli"
+  New-Item -ItemType Directory -Force -Path $bin | Out-Null
+  $exe = Get-ChildItem $tmp -Recurse -Filter "easyscript.exe" | Select-Object -First 1
+  Copy-Item $exe.FullName $bin -Force
+  $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+  if (-not $userPath) { $userPath = "" }
+  if (($userPath -split ";") -notcontains $bin) {
+    [Environment]::SetEnvironmentVariable("Path", (($userPath.TrimEnd(";"), $bin) -join ";").TrimStart(";"), "User")
+    Write-Host "Added $bin to your PATH (new terminals see it)."
+  }
+  Write-Host "The app:          easyscript in the Start menu"
+  Write-Host "The command line: easyscript"
+  Say "Done: easyscript $($release.tag_name). Run this again to update."
+} finally {
+  Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
 }
-
-Say "Installing"
-$setup = Get-ChildItem "target\release\bundle\nsis\*-setup.exe" | Sort-Object LastWriteTime | Select-Object -Last 1
-if (-not $setup) { Fail "the installer was not built" }
-# The installer is per user; /S installs without asking.
-$process = Start-Process -FilePath $setup.FullName -ArgumentList "/S" -Wait -PassThru
-if ($process.ExitCode -ne 0) { Fail "the installer stopped with code $($process.ExitCode)" }
-
-$bin = Join-Path $env:LOCALAPPDATA "easyscript-cli"
-New-Item -ItemType Directory -Force -Path $bin | Out-Null
-Copy-Item "target\release\easyscript.exe" $bin -Force
-$userPath = [Environment]::GetEnvironmentVariable("Path", "User")
-if (-not $userPath) { $userPath = "" }
-if (($userPath -split ";") -notcontains $bin) {
-  [Environment]::SetEnvironmentVariable("Path", (($userPath.TrimEnd(";"), $bin) -join ";").TrimStart(";"), "User")
-  Write-Host "Added $bin to your PATH (new terminals see it)."
-}
-Write-Host "The app:          easyscript in the Start menu"
-Write-Host "The command line: easyscript"
-Say "Done. Run this again to update after pulling new changes."

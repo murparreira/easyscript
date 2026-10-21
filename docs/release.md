@@ -5,7 +5,9 @@ What a public release of easyscript needs, what is done, and what only the team 
 ## Done
 
 - Installers for Linux (AppImage, `.deb`, `.rpm`), macOS (one `.dmg` for Apple silicon and Intel) and Windows (`-setup.exe`, `.msi`), and the command line for each, from the release workflow (`.github/workflows/release.yml`). A `v*` tag makes a draft release; running the workflow by hand builds the same as workflow artifacts. Not signed yet.
-- Building from source in one command: `scripts/install.sh` (macOS, Linux) and `scripts/install.ps1` (Windows) build the app and the command line and install them for the user, without an administrator.
+- Installing in one command, with nothing to install first: `scripts/install.sh` (macOS, Linux) and `scripts/install.ps1` (Windows) download the latest published release and install the app and the command line for the user, without an administrator. Downloaded that way the installers carry no quarantine or mark of the web, so macOS and Windows do not warn. The `Install` workflow tries them on clean machines each time a release is published.
+- The macOS app is signed ad hoc (`bundle.macOS.signingIdentity: "-"`), which Apple silicon needs to run it at all; a Developer ID certificate replaces that (below).
+- Building from source in one command: `scripts/build-from-source.sh` and `scripts/build-from-source.ps1`, for developers ([developing](development.md)).
 - The app in English and Portuguese (Brazil), following the system's language, with a menu to change it. The checks' messages too; exports write their own words in either.
 - Documents: [the README](../README.md), [the guide](guide.md), [the project file](project-file.md), [the formats](formats/README.md), [developing](development.md).
 - MIT OR Apache-2.0 (`LICENSE-MIT`, `LICENSE-APACHE`).

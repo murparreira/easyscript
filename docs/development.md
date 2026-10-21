@@ -22,7 +22,16 @@ docs/          the guide, the project file, the formats, releasing, these notes
 
 You need Rust stable (pinned by `rust-toolchain.toml`), Node 22, and [Tauri's system dependencies](https://tauri.app/start/prerequisites/). With [mise](https://mise.jdx.dev), `mise install` sets up Rust and Node.
 
-`./scripts/install.sh` (or `scripts\install.ps1` on Windows) builds a release and installs it, as in the README. For working on the app:
+To build easyscript and install it, in one command (it gets Rust and Node through mise when they are missing; on Linux it names the system libraries to install):
+
+```sh
+./scripts/build-from-source.sh                                         # macOS, Linux; --no-install builds only
+powershell -ExecutionPolicy Bypass -File scripts\build-from-source.ps1  # Windows; -NoInstall builds only
+```
+
+It installs for the user alone: the app in `~/Applications` (macOS), in `~/.local` with a menu entry (Linux, or `PREFIX`), in the Start menu (Windows); the command line `easyscript` beside it. `scripts/install.sh` and `scripts/install.ps1` are the other way, for writers: they download the latest release instead of building.
+
+For working on the app:
 
 ```sh
 npm ci                   # frontend and Tauri CLI

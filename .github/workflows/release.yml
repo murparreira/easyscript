@@ -75,13 +75,26 @@ jobs:
       # The command line carries the read view's page for `easyscript build`.
       - run: npm run build:page
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build --release --locked -p es-cli
+      - name: Build
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = macOS ]; then
+            # One command line for Apple silicon and Intel Macs.
+            cargo build --release --locked -p es-cli --target aarch64-apple-darwin
+            cargo build --release --locked -p es-cli --target x86_64-apple-darwin
+            lipo -create -output target/release/easyscript target/aarch64-apple-darwin/release/easyscript target/x86_64-apple-darwin/release/easyscript
+          else
+            cargo build --release --locked -p es-cli
+          fi
       - name: Package
         shell: bash
         run: |
           # macOS's bash 3.2 has no ${VAR,,}.
           name="$(echo "easyscript-cli-$RUNNER_OS-$RUNNER_ARCH" | tr '[:upper:]' '[:lower:]')"
+          if [ "$RUNNER_OS" = macOS ]; then name=easyscript-cli-macos-universal; fi
           mkdir -p "out/$name"
           cp README.md LICENSE-MIT LICENSE-APACHE "out/$name/"
           if [ "$RUNNER_OS" = "Windows" ]; then

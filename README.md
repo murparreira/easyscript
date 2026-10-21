@@ -24,36 +24,37 @@ The first format is Dialogue Manager 3 `.dialogue` files (Godot 4).
 
 ## Install
 
-### Download
+One command, with nothing to install first. It puts the latest easyscript and its command line on this computer, for you alone (no administrator). Run it again to update.
 
-Installers are on the [releases page](https://github.com/murparreira/easyscript/releases), with the command line for each system:
+**macOS and Linux**, in a terminal:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/murparreira/easyscript/main/scripts/install.sh | sh
+```
+
+**Windows**, in PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/murparreira/easyscript/main/scripts/install.ps1 | iex
+```
+
+The app lands in Applications on macOS, in the applications menu on Linux, and in the Start menu on Windows. It runs on macOS (Apple silicon and Intel), Windows 10 and 11, and Linux on x86_64.
+
+### Or download an installer
+
+The [releases page](https://github.com/murparreira/easyscript/releases) has an installer for each system, and the command line on its own:
 
 | System | File | The first time |
 |---|---|---|
-| Windows 10 and 11 | `…-setup.exe` or `.msi` | Windows SmartScreen warns about an unknown app: **More info → Run anyway** |
-| macOS (Apple silicon and Intel) | `.dmg` | macOS refuses to open it: **System Settings → Privacy & Security → Open Anyway** |
+| Windows 10 and 11 | `…-setup.exe` or `.msi` | SmartScreen warns about an unknown app: **More info → Run anyway** |
+| macOS | `.dmg` | macOS refuses to open it: **System Settings → Privacy & Security → Open Anyway** |
 | Linux, any distribution | `.AppImage` | Make it executable (`chmod +x`) and run it |
 | Debian, Ubuntu | `.deb` | `sudo apt install ./easyscript_*.deb` |
 | Fedora, openSUSE | `.rpm` | `sudo dnf install ./easyscript-*.rpm` |
 
-The warnings come from the installers not being signed yet; [releasing](docs/release.md) says what signing needs.
+Opened from a browser download, the installers warn because they are not signed yet ([releasing](docs/release.md) says what signing needs). Installed with the command above, they do not ask.
 
-### From source, in one command
-
-From a clone of this repository, with [Rust](https://rustup.rs) and [Node 22](https://nodejs.org) installed. With [mise](https://mise.jdx.dev) installed instead, the script gets both itself.
-
-```sh
-./scripts/install.sh                                            # macOS, Linux
-powershell -ExecutionPolicy Bypass -File scripts\install.ps1    # Windows
-```
-
-It builds the app and the command line and installs them for you; nothing needs an administrator.
-
-- **macOS**: the app goes to `~/Applications`.
-- **Linux**: the app gets a menu entry, and the script names the system libraries to install if any are missing.
-- **Windows**: the app goes in the Start menu.
-
-Run it again to update. `--no-install` (`-NoInstall` on Windows) only builds.
+To build it yourself from this repository instead, see [developing](docs/development.md).
 
 ## Start
 

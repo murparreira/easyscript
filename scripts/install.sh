@@ -1,111 +1,97 @@
-#!/usr/bin/env bash
-# Build easyscript from this source tree and install it for you, in one command:
+#!/bin/sh
+# Install easyscript, the app and its command line, from the latest release on GitHub. For
+# you alone: no administrator, and nothing to install first.
 #
-#   ./scripts/install.sh            build, then install the app (and the command line)
-#   ./scripts/install.sh --no-install   build only; run it with target/release/easyscript-app
+#   curl -fsSL https://raw.githubusercontent.com/murparreira/easyscript/main/scripts/install.sh | sh
 #
-# macOS: the app goes to ~/Applications. Linux: to ~/.local (a menu entry, and
-# `easyscript-app` on the PATH). The command line `easyscript` goes to ~/.local/bin.
-# PREFIX changes where on Linux (default ~/.local).
-#
-# Needs Rust and Node 22: with mise (https://mise.jdx.dev) installed, the script gets both
-# itself. On Linux it also needs the WebKitGTK libraries; it names the command to install
-# them when they are missing. Nothing is installed with sudo.
-set -euo pipefail
-cd "$(dirname "$0")/.."
+# Run it again to update. macOS: the app goes to ~/Applications. Linux (x86_64): to
+# ~/.local, with a menu entry; PREFIX changes where. The command line `easyscript` goes to
+# ~/.local/bin (PREFIX/bin). EASYSCRIPT_VERSION=v0.1.0 picks a release instead of the latest.
+set -eu
 
-bold() { printf '\n\033[1m%s\033[0m\n' "$*"; }
+REPO="${EASYSCRIPT_REPO:-murparreira/easyscript}"
+API="${EASYSCRIPT_API:-https://api.github.com}"
+
+say() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 fail() {
   printf '\n\033[1;31merror:\033[0m %s\n' "$*" >&2
   exit 1
 }
-
-install=1
-for arg in "$@"; do
-  case "$arg" in
-    --no-install) install=0 ;;
-    -h | --help)
-      sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
-      exit 0
-      ;;
-    *) fail "unknown option $arg (try --help)" ;;
-  esac
-done
+need() { command -v "$1" >/dev/null 2>&1 || fail "$1 is needed and is not here"; }
+need curl
+need tar
 
 os="$(uname -s)"
+arch="$(uname -m)"
 case "$os" in
-  Linux | Darwin) ;;
-  *) fail "on Windows, run scripts\\install.ps1 in PowerShell" ;;
+  Darwin) ;;
+  Linux) [ "$arch" = x86_64 ] || fail "there is no easyscript for Linux on $arch yet, only x86_64" ;;
+  *) fail "on Windows, run in PowerShell: irm https://raw.githubusercontent.com/$REPO/main/scripts/install.ps1 | iex" ;;
 esac
 
-# Rust and Node: from mise when it is there (mise.toml pins them), else from the PATH.
-if command -v mise >/dev/null 2>&1; then
-  bold "Rust and Node, with mise"
-  mise trust --quiet "$PWD/mise.toml" >/dev/null 2>&1 || true
-  mise install
-  eval "$(mise env --shell bash)"
-fi
-command -v cargo >/dev/null 2>&1 || fail "Rust is missing. Install it from https://rustup.rs, or install mise (https://mise.jdx.dev) and run this again."
-command -v npm >/dev/null 2>&1 || fail "Node is missing. Install Node 22 from https://nodejs.org, or install mise (https://mise.jdx.dev) and run this again."
-node_major="$(node -p 'process.versions.node.split(".")[0]')"
-[ "$node_major" -ge 20 ] || fail "Node $node_major is too old: Node 22 is needed."
-
-if [ "$os" = Linux ] && ! pkg-config --exists webkit2gtk-4.1 2>/dev/null; then
-  if command -v apt-get >/dev/null 2>&1; then
-    hint="sudo apt-get install libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev"
-  elif command -v dnf >/dev/null 2>&1; then
-    hint="sudo dnf install webkit2gtk4.1-devel openssl-devel curl wget file libappindicator-gtk3-devel librsvg2-devel libxdo-devel && sudo dnf group install c-development"
-  elif command -v pacman >/dev/null 2>&1; then
-    hint="sudo pacman -S --needed webkit2gtk-4.1 base-devel curl wget file openssl appmenu-gtk-module libappindicator-gtk3 librsvg xdotool"
-  elif command -v zypper >/dev/null 2>&1; then
-    hint="sudo zypper in webkit2gtk3-devel libopenssl-devel curl wget file libappindicator3-1 librsvg-devel && sudo zypper in -t pattern devel_basis"
-  else
-    hint="see https://tauri.app/start/prerequisites/#linux"
-  fi
-  fail "the WebKitGTK libraries the app is built on are missing. Install them with:
-
-  $hint
-
-then run this again."
-fi
-
-bold "JavaScript packages"
-npm ci --no-audit --no-fund
-
-bold "The command line (a few minutes the first time)"
-npm run build:page
-cargo build --release --locked -p es-cli
-
-bold "The app (a few minutes the first time)"
-if [ "$os" = Darwin ]; then
-  npm run tauri -- build --bundles app
+say "Finding the release"
+if [ -n "${EASYSCRIPT_VERSION:-}" ]; then
+  query="$API/repos/$REPO/releases/tags/$EASYSCRIPT_VERSION"
 else
-  npm run tauri -- build --no-bundle
+  # The newest published release, pre-releases included.
+  query="$API/repos/$REPO/releases?per_page=1"
 fi
+release="$(curl -fsSL -H 'Accept: application/vnd.github+json' "$query")" ||
+  fail "cannot reach GitHub to find the release ($query)"
+urls="$(printf '%s' "$release" | grep -o '"browser_download_url": *"[^"]*"' | sed 's/.*"\(http[^"]*\)"$/\1/')"
+tag="$(printf '%s' "$release" | grep -o '"tag_name": *"[^"]*"' | head -n 1 | sed 's/.*"\([^"]*\)"$/\1/')"
+[ -n "$urls" ] || fail "no release of $REPO has files to install yet"
+pick() {
+  found="$(printf '%s\n' "$urls" | grep -E "$1" | head -n 1)"
+  [ -n "$found" ] || fail "the release $tag has no $2"
+  printf '%s' "$found"
+}
 
-if [ "$install" = 0 ]; then
-  bold "Built"
-  echo "The app:          target/release/easyscript-app [a game folder]"
-  echo "The command line: target/release/easyscript"
-  exit 0
-fi
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+fetch() { curl -fL --progress-bar -o "$2" "$1" || fail "cannot download $1"; }
 
 if [ "$os" = Darwin ]; then
-  bold "Installing in ~/Applications"
-  mkdir -p "$HOME/Applications" "$HOME/.local/bin"
+  app_url="$(pick '_universal\.dmg$' 'app for macOS')"
+  cli_url="$(pick 'easyscript-cli-macos-(universal|arm64)\.tar\.gz$' 'command line for macOS')"
+  say "Downloading easyscript $tag"
+  fetch "$app_url" "$tmp/easyscript.dmg"
+  fetch "$cli_url" "$tmp/cli.tar.gz"
+  say "Installing in ~/Applications"
+  hdiutil attach -nobrowse -quiet -mountpoint "$tmp/disk" "$tmp/easyscript.dmg"
+  mkdir -p "$HOME/Applications"
   rm -rf "$HOME/Applications/easyscript.app"
-  cp -R target/release/bundle/macos/easyscript.app "$HOME/Applications/"
-  cp target/release/easyscript "$HOME/.local/bin/"
-  echo "The app:          ~/Applications/easyscript.app (in Launchpad and Spotlight)"
-  echo "The command line: ~/.local/bin/easyscript"
+  ditto "$tmp/disk/easyscript.app" "$HOME/Applications/easyscript.app"
+  hdiutil detach -quiet "$tmp/disk"
+  # Downloaded with curl, it carries no quarantine; this makes sure.
+  xattr -dr com.apple.quarantine "$HOME/Applications/easyscript.app" 2>/dev/null || true
   bin="$HOME/.local/bin"
+  mkdir -p "$bin"
+  tar -xzf "$tmp/cli.tar.gz" -C "$tmp"
+  cp "$tmp"/easyscript-cli-*/easyscript "$bin/easyscript"
+  chmod 755 "$bin/easyscript"
+  echo "The app:          easyscript in ~/Applications (Launchpad, Spotlight)"
+  echo "The command line: $bin/easyscript"
 else
+  app_url="$(pick '_amd64\.AppImage$' 'app for Linux')"
+  cli_url="$(pick 'easyscript-cli-linux-x64\.tar\.gz$' 'command line for Linux')"
+  say "Downloading easyscript $tag"
+  fetch "$app_url" "$tmp/easyscript.AppImage"
+  fetch "$cli_url" "$tmp/cli.tar.gz"
   prefix="${PREFIX:-$HOME/.local}"
-  bold "Installing in $prefix"
-  mkdir -p "$prefix/bin" "$prefix/share/applications" "$prefix/share/icons/hicolor/128x128/apps"
-  install -m 755 target/release/easyscript-app "$prefix/bin/easyscript-app"
-  install -m 755 target/release/easyscript "$prefix/bin/easyscript"
-  install -m 644 app/src-tauri/icons/128x128.png "$prefix/share/icons/hicolor/128x128/apps/easyscript.png"
+  say "Installing in $prefix"
+  # Unpacked once, so it runs without FUSE, which many systems lack.
+  chmod +x "$tmp/easyscript.AppImage"
+  (cd "$tmp" && ./easyscript.AppImage --appimage-extract >/dev/null) || fail "cannot unpack the app"
+  mkdir -p "$prefix/lib" "$prefix/bin" "$prefix/share/applications" "$prefix/share/icons/hicolor/128x128/apps"
+  rm -rf "$prefix/lib/easyscript"
+  mv "$tmp/squashfs-root" "$prefix/lib/easyscript"
+  cat >"$prefix/bin/easyscript-app" <<EOF
+#!/bin/sh
+exec "$prefix/lib/easyscript/AppRun" "\$@"
+EOF
+  chmod 755 "$prefix/bin/easyscript-app"
+  cp "$prefix/lib/easyscript/easyscript.png" "$prefix/share/icons/hicolor/128x128/apps/easyscript.png" 2>/dev/null || true
   cat >"$prefix/share/applications/easyscript.desktop" <<EOF
 [Desktop Entry]
 Type=Application
@@ -113,16 +99,20 @@ Name=easyscript
 Comment=Write a game's dialogue where it lives
 Exec="$prefix/bin/easyscript-app" %f
 Icon=easyscript
+StartupWMClass=easyscript-app
 Terminal=false
 Categories=Development;
 EOF
   command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$prefix/share/applications" >/dev/null 2>&1 || true
-  echo "The app:          easyscript in your applications menu, or easyscript-app [a game folder]"
-  echo "The command line: easyscript"
   bin="$prefix/bin"
+  tar -xzf "$tmp/cli.tar.gz" -C "$tmp"
+  cp "$tmp"/easyscript-cli-*/easyscript "$bin/easyscript"
+  chmod 755 "$bin/easyscript"
+  echo "The app:          easyscript in your applications menu, or easyscript-app [a game folder]"
+  echo "The command line: $bin/easyscript"
 fi
 case ":$PATH:" in
   *":$bin:"*) ;;
-  *) echo "Add $bin to your PATH to run the command line by name." ;;
+  *) echo "To run the command line by name, add $bin to your PATH." ;;
 esac
-bold "Done. Run this again to update after pulling new changes."
+say "Done: easyscript $tag. Run this again to update."

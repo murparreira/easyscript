@@ -1,11 +1,11 @@
-name: Install from source
+name: Install
 
-# The one-command install scripts, on the three systems: build, install, and the installed
-# command line reads a project.
+# The one-command installers (scripts/install.sh, scripts/install.ps1) on clean machines:
+# they install the latest published release, and the app they install starts and keeps
+# running. Runs when a release is published, and by hand.
 on:
-  push:
-    branches: [main]
-    paths: ["scripts/**", ".github/workflows/install.yml"]
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -17,41 +17,47 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, macos-latest]
+        # 24.04 has no FUSE 2, which an AppImage usually needs.
+        os: [ubuntu-22.04, ubuntu-24.04, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      # Without them the script stops and names this command.
-      - name: WebKitGTK and the other libraries
-        if: runner.os == 'Linux'
+      - name: Install, as a writer would
+        run: sh scripts/install.sh < /dev/null
+      - name: The command line reads a project
+        run: ~/.local/bin/easyscript stats crates/core/tests/fixtures/lighthouse
+      - name: The app starts and keeps running
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
-      - run: ./scripts/install.sh
-      - name: Installed
-        run: |
-          if [ "$RUNNER_OS" = macOS ]; then test -d "$HOME/Applications/easyscript.app"; else test -x "$HOME/.local/bin/easyscript-app" && test -f "$HOME/.local/share/applications/easyscript.desktop"; fi
-          "$HOME/.local/bin/easyscript" stats crates/core/tests/fixtures/lighthouse
+          if [ "$RUNNER_OS" = macOS ]; then
+            app="$(ls ~/Applications/easyscript.app/Contents/MacOS/* | head -n 1)"
+            "$app" crates/core/tests/fixtures/lighthouse & pid=$!
+          else
+            sudo apt-get update && sudo apt-get install -y xvfb
+            xvfb-run -a ~/.local/bin/easyscript-app crates/core/tests/fixtures/lighthouse & pid=$!
+          fi
+          sleep 20
+          kill -0 "$pid"
+          kill "$pid"
 
   windows:
     name: install.ps1 (windows-latest)
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - run: powershell -ExecutionPolicy Bypass -File scripts\install.ps1
-      - name: Installed
+      - name: Install, as a writer would
+        shell: powershell
+        run: Get-Content scripts\install.ps1 -Raw | Invoke-Expression
+      - name: The command line reads a project
         shell: pwsh
         run: |
-          Get-ChildItem $env:LOCALAPPDATA -Filter "easyscript*.exe" -Recurse -Depth 2 | ForEach-Object FullName
           & "$env:LOCALAPPDATA\easyscript-cli\easyscript.exe" stats crates/core/tests/fixtures/lighthouse
           if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: The app starts and keeps running
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem $env:LOCALAPPDATA -Recurse -Depth 2 -Filter "easyscript*.exe" | Where-Object { $_.Name -notmatch "uninstall" -and $_.DirectoryName -notmatch "easyscript-cli" } | Select-Object -First 1
+          Write-Host "Starting $($exe.FullName)"
+          $process = Start-Process -FilePath $exe.FullName -ArgumentList "crates\core\tests\fixtures\lighthouse" -PassThru
+          Start-Sleep -Seconds 20
+          if ($process.HasExited) { Write-Host "It stopped with code $($process.ExitCode)"; exit 1 }
+          Stop-Process -Id $process.Id
