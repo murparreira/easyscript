@@ -4,7 +4,7 @@
 use std::path::Path;
 
 use dm_core::{Project, Script};
-use dm_formats::export::{fountain, json, translation, voice};
+use dm_formats::export::{Language, fountain, json, translation, voice};
 use expect_test::expect_file;
 
 fn ferry() -> (Project, Script) {
@@ -69,10 +69,17 @@ fn translation_table_keeps_translations() {
 #[test]
 fn voice_scripts() {
     let (project, script) = ferry();
+    let en = Language::En;
     expect_file!["snapshots/ferry-voice.md"]
-        .assert_eq(&voice::to_markdown(&project, &script, None));
-    expect_file!["snapshots/ferry-voice.csv"].assert_eq(&voice::to_csv(&project, &script));
-    let captain = voice::to_markdown(&project, &script, Some("captain"));
+        .assert_eq(&voice::to_markdown(&project, &script, None, en));
+    expect_file!["snapshots/ferry-voice.csv"].assert_eq(&voice::to_csv(&project, &script, en));
+    expect_file!["snapshots/ferry-voice.pt-BR.md"].assert_eq(&voice::to_markdown(
+        &project,
+        &script,
+        None,
+        Language::PtBr,
+    ));
+    let captain = voice::to_markdown(&project, &script, Some("captain"), en);
     assert!(captain.starts_with("# The Captain: voice script"));
     assert!(!captain.contains("Deckhand: voice script"));
 }
@@ -80,5 +87,14 @@ fn voice_scripts() {
 #[test]
 fn screenplay() {
     let (project, script) = ferry();
-    expect_file!["snapshots/ferry.fountain"].assert_eq(&fountain::to_fountain(&project, &script));
+    expect_file!["snapshots/ferry.fountain"].assert_eq(&fountain::to_fountain(
+        &project,
+        &script,
+        Language::En,
+    ));
+    expect_file!["snapshots/ferry.pt-BR.fountain"].assert_eq(&fountain::to_fountain(
+        &project,
+        &script,
+        Language::PtBr,
+    ));
 }

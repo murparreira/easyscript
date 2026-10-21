@@ -55,7 +55,7 @@ Exporting over a table that exists keeps it:
 
 For voice actors: each character's lines, grouped by the mood to read them in, with the line before each one for context, its label, file and line, and its static id (which names the audio file in Dialogue Manager). The mood is the value of the tag the project file shows as `voice`; a character's moods come in the order of their `voices`, then the rest, then lines with no mood. Lines said in thought (the tag shown as `thought`) say so.
 
-`voice` is Markdown, one section per character (`--character` for one); `voice-csv` is one row per line to sort and fill in at a recording session.
+`voice` is Markdown, one section per character (`--character` for one); `voice-csv` is one row per line to sort and fill in at a recording session. Their headings and column names are in English or Portuguese (`--language pt-BR`; the app uses its own language), as are a screenplay's stage directions.
 
 ### Screenplay (`fountain`)
 

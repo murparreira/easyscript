@@ -7,6 +7,7 @@ use std::fmt::Write as _;
 use dm_core::model::{Label, Node, NodeKind, Segment};
 use dm_core::{Project, Script};
 
+use super::words::{Language, fill};
 use super::{Source, plain};
 
 /// A line to record.
@@ -22,14 +23,22 @@ pub struct Take {
     /// Said in thought (the tag shown as `thought`).
     pub thought: bool,
     pub text: String,
-    /// What comes right before: who says it, and the words (`(choice)` for a choice the
-    /// player picked).
-    pub context: Option<(String, String)>,
+    /// What comes right before: who says it, and the words.
+    pub context: Option<(Said, String)>,
     /// The static line id, which names the audio file in Dialogue Manager.
     pub id: Option<String>,
     pub label: String,
     pub path: String,
     pub line: usize,
+}
+
+/// Who says the line before a take.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Said {
+    Speaker(String),
+    Narration,
+    /// The choice the player picked.
+    Choice,
 }
 
 /// Every spoken line, in script order.
@@ -39,7 +48,7 @@ pub fn takes(project: &Project, script: &Script) -> Vec<Take> {
     let thought_tag = source.tag_shown_as("thought");
     let mut out = Vec::new();
     for label in script.labels() {
-        let mut before: Option<(String, String)> = None;
+        let mut before: Option<(Said, String)> = None;
         collect(
             &source,
             label,
@@ -56,7 +65,7 @@ fn collect(
     source: &Source,
     label: &Label,
     nodes: &[Node],
-    before: &mut Option<(String, String)>,
+    before: &mut Option<(Said, String)>,
     tags: (Option<&str>, Option<&str>),
     out: &mut Vec<Take>,
 ) {
@@ -64,7 +73,7 @@ fn collect(
         match &node.kind {
             NodeKind::Line(line) => {
                 let text = plain(line);
-                let who = line.speaker.clone().unwrap_or_default();
+                let who = line.speaker.clone().map_or(Said::Narration, Said::Speaker);
                 if let Some(speaker) = &line.speaker {
                     let character = source.character(speaker);
                     out.push(Take {
@@ -88,10 +97,8 @@ fn collect(
             NodeKind::Menu { choices } => {
                 let after = before.clone();
                 for choice in choices {
-                    let mut inside = Some((
-                        "(choice)".to_owned(),
-                        Segment::plain(&choice.text).trim().to_owned(),
-                    ));
+                    let mut inside =
+                        Some((Said::Choice, Segment::plain(&choice.text).trim().to_owned()));
                     collect(source, label, &choice.body, &mut inside, tags, out);
                 }
                 *before = after;
@@ -177,7 +184,13 @@ fn grouped<'t>(project: &Project, takes: &'t [Take]) -> Vec<(&'t str, ByMood<'t>
 }
 
 /// The script for `character` (an id or a speaker), or for everyone, as Markdown.
-pub fn to_markdown(project: &Project, script: &Script, character: Option<&str>) -> String {
+pub fn to_markdown(
+    project: &Project,
+    script: &Script,
+    character: Option<&str>,
+    language: Language,
+) -> String {
+    let words = language.words();
     let all = takes(project, script);
     let takes: Vec<Take> = all
         .into_iter()
@@ -191,28 +204,41 @@ pub fn to_markdown(project: &Project, script: &Script, character: Option<&str>) 
         if i > 0 {
             out.push('\n');
         }
-        let _ = writeln!(out, "# {name}: voice script\n");
+        let _ = writeln!(out, "# {}\n", fill(words.voice_script, &[("name", name)]));
         let _ = writeln!(
             out,
             "{}{count} {}, {} {}.\n",
             title.map(|t| format!("{t}. ")).unwrap_or_default(),
-            if count == 1 { "line" } else { "lines" },
+            if count == 1 { words.line } else { words.lines },
             moods.len(),
-            if moods.len() == 1 { "mood" } else { "moods" },
+            if moods.len() == 1 {
+                words.mood
+            } else {
+                words.moods
+            },
         );
         for (mood, lines) in moods {
             let _ = writeln!(
                 out,
                 "## {} ({})\n",
-                mood.unwrap_or("No mood given"),
+                mood.unwrap_or(words.no_mood),
                 lines.len()
             );
             for (n, take) in lines.iter().enumerate() {
-                let thought = if take.thought { "(thought) " } else { "" };
+                let thought = if take.thought {
+                    format!("{} ", words.thought)
+                } else {
+                    String::new()
+                };
                 let _ = writeln!(out, "{}. {thought}**{}**", n + 1, escape(&take.text));
-                if let Some((who, words)) = &take.context {
-                    let who = if who.is_empty() { "narration" } else { who };
-                    let _ = writeln!(out, "   - after {who}: *{}*", escape(words));
+                if let Some((who, said)) = &take.context {
+                    let who = match who {
+                        Said::Speaker(s) => s.as_str(),
+                        Said::Narration => words.narration,
+                        Said::Choice => words.choice,
+                    };
+                    let after = fill(words.after, &[("who", who)]);
+                    let _ = writeln!(out, "   - {after}: *{}*", escape(said));
                 }
                 let id = take
                     .id
@@ -235,40 +261,28 @@ pub fn to_markdown(project: &Project, script: &Script, character: Option<&str>) 
 }
 
 /// Every spoken line as CSV: one row per line, to sort and fill in at a recording session.
-pub fn to_csv(project: &Project, script: &Script) -> String {
+pub fn to_csv(project: &Project, script: &Script, language: Language) -> String {
+    let words = language.words();
     let takes = takes(project, script);
     let mut writer = csv::Writer::from_writer(Vec::new());
-    let header = [
-        "character",
-        "mood",
-        "thought",
-        "text",
-        "context",
-        "id",
-        "label",
-        "file",
-        "line",
-    ];
-    writer.write_record(header).expect("in memory");
+    writer.write_record(words.columns).expect("in memory");
     for (_, moods) in grouped(project, &takes) {
         for (_, lines) in moods {
             for take in lines {
                 let context = take
                     .context
                     .as_ref()
-                    .map(|(who, words)| {
-                        if who.is_empty() {
-                            words.clone()
-                        } else {
-                            format!("{who}: {words}")
-                        }
+                    .map(|(who, said)| match who {
+                        Said::Speaker(s) => format!("{s}: {said}"),
+                        Said::Narration => said.clone(),
+                        Said::Choice => format!("{}: {said}", words.choice),
                     })
                     .unwrap_or_default();
                 writer
                     .write_record([
                         take.name.as_str(),
                         take.mood.as_deref().unwrap_or(""),
-                        if take.thought { "yes" } else { "" },
+                        if take.thought { words.yes } else { "" },
                         &take.text,
                         &context,
                         take.id.as_deref().unwrap_or(""),

@@ -36,7 +36,7 @@ When `origin` is on GitHub, **Sign in to GitHub** shows a code; GitHub, in your 
 
 **Export…** writes the script, unsaved edits included, as JSON for other tools (a documented format), as Dialogue Manager's translation table (exporting over a table keeps its translations), as voice scripts and recording sheets by character and mood, or as a Fountain screenplay. **Import…** turns a Twine (`.twee`), Yarn Spinner (`.yarn`) or Ink (`.ink`) script into a new `.dialogue` file in the project, after showing it and what did not convert. See [the formats](docs/formats/README.md).
 
-The app speaks English and Portuguese (Brazil): it follows the system's language, and the menu at the top right changes it. The command line, import warnings and the files the exports write are in English for now.
+The app speaks English and Portuguese (Brazil): it follows the system's language, and the menu at the top right changes it. Voice scripts, recording sheets and screenplays are written with their own words (headings, stage directions) in the app's language (`--language pt-BR` on the command line). The command line and import warnings are in English for now.
 
 The command line:
 

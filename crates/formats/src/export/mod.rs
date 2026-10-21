@@ -5,6 +5,9 @@ pub mod fountain;
 pub mod json;
 pub mod translation;
 pub mod voice;
+mod words;
+
+pub use words::Language;
 
 use dm_core::config::Character;
 use dm_core::model::{Line, Segment, Span, Tag};
@@ -60,6 +63,8 @@ pub struct Options {
     pub extra_locales: Vec<String>,
     /// Voice: one character (an id or a speaker) instead of everyone.
     pub character: Option<String>,
+    /// The language of the export's own words (voice scripts, screenplays).
+    pub language: Language,
 }
 
 /// The export as text. `existing` is what is at the destination now: a translation
@@ -86,9 +91,14 @@ pub fn render(
             }
             translation::to_csv(project, script, &table, existing)?
         }
-        Format::Voice => voice::to_markdown(project, script, options.character.as_deref()),
-        Format::VoiceCsv => voice::to_csv(project, script),
-        Format::Fountain => fountain::to_fountain(project, script),
+        Format::Voice => voice::to_markdown(
+            project,
+            script,
+            options.character.as_deref(),
+            options.language,
+        ),
+        Format::VoiceCsv => voice::to_csv(project, script, options.language),
+        Format::Fountain => fountain::to_fountain(project, script, options.language),
     })
 }
 

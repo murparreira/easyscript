@@ -65,6 +65,9 @@ enum Command {
         /// voice: only this character (an id from the project file, or a speaker).
         #[arg(long)]
         character: Option<String>,
+        /// voice, voice-csv, fountain: the language of the export's own words (en, pt-BR).
+        #[arg(long, default_value = "en", value_parser = parse_language)]
+        language: dm_formats::export::Language,
     },
     /// Convert a Twine (`.twee`), Yarn Spinner (`.yarn`) or Ink (`.ink`) script into a
     /// Dialogue Manager file. What does not convert is kept as comments, and listed.
@@ -94,6 +97,10 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
+}
+
+fn parse_language(tag: &str) -> Result<dm_formats::export::Language, String> {
+    dm_formats::export::Language::parse(tag).ok_or_else(|| format!("`{tag}`: en or pt-BR"))
 }
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -226,6 +233,7 @@ fn main() -> ExitCode {
             locale,
             translate_to,
             character,
+            language,
         } => {
             let project = match project.load() {
                 Ok(p) => p,
@@ -239,6 +247,7 @@ fn main() -> ExitCode {
                 locale: Some(locale),
                 extra_locales: translate_to,
                 character,
+                language,
             };
             let text = match dm_formats::export::render(
                 format.into(),

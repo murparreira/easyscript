@@ -9,7 +9,7 @@
   import type { ReadView } from "./bindings/ReadView";
   import type { Session } from "./bindings/Session";
   import { useEditor } from "./editor.svelte";
-  import { plural, t } from "./i18n.svelte";
+  import { locale as app, plural, t } from "./i18n.svelte";
 
   let { view }: { view: ReadView } = $props();
   const editor = useEditor()!;
@@ -59,6 +59,7 @@
         .map((l) => l.trim())
         .filter(Boolean),
       character: character || null,
+      language: app.language,
     };
     busy = true;
     error = null;
