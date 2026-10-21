@@ -595,6 +595,8 @@ const ptBR: Record<string, string> = {
   "No dialogue here yet": "Ainda não há diálogo aqui",
   "Dialogue lives in .dialogue files in the game's folder, as scenes: a scene is what a character says when the game starts it by name. Make the first file and its first scene, then write its lines here and play them on the right.": "O diálogo fica em arquivos .dialogue na pasta do jogo, em cenas: uma cena é o que um personagem diz quando o jogo a inicia pelo nome. Crie o primeiro arquivo e a primeira cena, depois escreva as falas aqui e jogue-as à direita.",
   "Nothing to play yet: write a scene first.": "Ainda não há nada para jogar: escreva uma cena primeiro.",
+  "A game on this computer: a Godot project, a clone of the team's repository, or a new folder to start in.": "Um jogo neste computador: um projeto Godot, um clone do repositório da equipe, ou uma pasta nova para começar.",
+  "The team's repository: cloned to a folder here, then kept in step with the team's changes.": "O repositório da equipe: clonado numa pasta aqui, e depois mantido em dia com as mudanças da equipe.",
 };
 
 export default ptBR;

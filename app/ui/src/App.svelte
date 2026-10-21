@@ -124,8 +124,14 @@
       {#if desktop}
         <p class="lede">{t("Write a game's dialogue where it lives. Open the game's folder: the app finds its dialogue files and shows the script. Nothing on disk changes until you save.")}</p>
         <div class="welcome-actions">
-          <button class="btn primary big" type="button" onclick={choose} disabled={loading}>{loading ? t("Opening…") : t("Open a folder…")}</button>
-          <button class="btn big" type="button" onclick={() => (cloning = true)} disabled={loading}>{t("Open from GitHub…")}</button>
+          <div class="way">
+            <button class="btn primary big" type="button" onclick={choose} disabled={loading}>{loading ? t("Opening…") : t("Open a folder…")}</button>
+            <p class="hint">{t("A game on this computer: a Godot project, a clone of the team's repository, or a new folder to start in.")}</p>
+          </div>
+          <div class="way">
+            <button class="btn big" type="button" onclick={() => (cloning = true)} disabled={loading}>{t("Open from GitHub…")}</button>
+            <p class="hint">{t("The team's repository: cloned to a folder here, then kept in step with the team's changes.")}</p>
+          </div>
         </div>
         {#if error}<p class="error">{error}</p>{/if}
         {#if recent.length > 0}

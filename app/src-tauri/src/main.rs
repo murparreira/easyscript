@@ -1467,6 +1467,10 @@ mod tests {
                 let call_body: serde_json::Value =
                     serde_json::from_slice(&body).unwrap_or_default();
                 let cmd = call_body["cmd"].as_str().unwrap_or_default().to_owned();
+                // Events from the project open before are not this one's.
+                if cmd == "open_project" {
+                    events.lock().unwrap().clear();
+                }
                 let args = call_body["args"].clone();
                 let args = if args.is_null() {
                     serde_json::json!({})
