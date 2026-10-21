@@ -432,3 +432,65 @@ fn refresh_takes_a_project_file_changed_on_disk_when_not_edited() {
         "the edits stay"
     );
 }
+
+#[test]
+fn a_new_file_is_an_edit_until_saved() {
+    let dir = project();
+    let mut ws = Workspace::open(dir.path(), None).unwrap();
+    ws.new_file("talks/gate.dialogue", "~ gate\n\n=> END\n")
+        .unwrap();
+    assert_eq!(ws.state().changed, ["talks/gate.dialogue"]);
+    assert!(!dir.path().join("talks").exists(), "nothing written yet");
+    assert_eq!(
+        ws.project()
+            .files
+            .iter()
+            .map(|f| f.path.as_str())
+            .collect::<Vec<_>>(),
+        ["a.dialogue", "b.dialogue", "talks/gate.dialogue"]
+    );
+    // It is a file like the others: edited, undone, read again.
+    ws.edit(
+        "talks/gate.dialogue",
+        &Edit::SetJump {
+            at: line("~ gate\n\n=> END\n", 3),
+            target: Some("a".into()),
+        },
+    )
+    .unwrap();
+    ws.refresh().unwrap();
+    assert_eq!(ws.project().files[2].text, "~ gate\n\n=> a\n");
+    ws.undo();
+    ws.undo();
+    assert!(ws.state().changed.is_empty());
+    assert_eq!(ws.project().files.len(), 2, "undone: no file");
+    ws.redo();
+    assert_eq!(ws.project().files[2].text, "~ gate\n\n=> END\n");
+
+    assert_eq!(ws.save().unwrap(), ["talks/gate.dialogue"]);
+    assert_eq!(
+        read(dir.path(), "talks/gate.dialogue"),
+        "~ gate\n\n=> END\n"
+    );
+    ws.refresh().unwrap();
+    assert!(ws.state().changed.is_empty());
+    assert_eq!(ws.project().files.len(), 3);
+}
+
+#[test]
+fn a_new_file_goes_where_the_project_finds_it() {
+    let dir = project();
+    let mut ws = Workspace::open(dir.path(), None).unwrap();
+    for (path, why) in [
+        ("../out.dialogue", "inside the project"),
+        ("/tmp/out.dialogue", "inside the project"),
+        ("notes.txt", "ends in .dialogue"),
+        ("a.dialogue", "exists already"),
+    ] {
+        let error = ws.new_file(path, "~ x\n").unwrap_err();
+        assert!(error.0.contains(why), "{path}: {error}");
+    }
+    let error = ws.new_file("c.dialogue", "~ b\n").unwrap_err();
+    assert!(error.0.contains("label `b`"), "{error}");
+    assert!(ws.state().changed.is_empty());
+}

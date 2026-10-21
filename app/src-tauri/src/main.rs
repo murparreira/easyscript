@@ -118,6 +118,27 @@ async fn draft_project_file(opened: State<'_, Opened>) -> Result<Session, String
     .await
 }
 
+/// A new dialogue file with its first scene, unsaved.
+#[tauri::command]
+async fn new_dialogue_file(
+    path: String,
+    scene: String,
+    opened: State<'_, Opened>,
+) -> Result<Session, String> {
+    with_workspace(&opened, move |ws| {
+        let scene = scene.trim();
+        if !dm_core::edit::is_title(scene) {
+            return Err(format!(
+                "`{scene}` cannot name a scene: letters, digits and _, not starting with a digit"
+            ));
+        }
+        ws.new_file(&path, &format!("~ {scene}\n=> END\n"))
+            .map_err(|e| e.to_string())?;
+        Ok(ws.session())
+    })
+    .await
+}
+
 /// Make edits to one file's working copy, as one step.
 #[tauri::command]
 async fn edit(path: String, edits: Vec<Edit>, opened: State<'_, Opened>) -> Result<Edited, String> {
@@ -629,55 +650,6 @@ fn github_sign_out(github: State<'_, GitHubSession>) {
     github.forget();
 }
 
-/// Push the branch and open its pull request (or find the one open). Refused with unsaved
-/// edits, with project files not committed, and on the default branch.
-#[tauri::command]
-async fn github_pull_request(
-    title: String,
-    body: String,
-    opened: State<'_, Opened>,
-    github: State<'_, GitHubSession>,
-) -> Result<PullRequest, String> {
-    let token = github.token().ok_or("sign in to GitHub first")?;
-    let (root, branch) = with_workspace(&opened, |ws| {
-        if !ws.state().changed.is_empty() {
-            return Err("save your edits and commit them first".to_owned());
-        }
-        let status = git::status(ws.root(), &ws.owned_paths())
-            .map_err(|e| e.to_string())?
-            .ok_or("the project is not in a git repository")?;
-        if !status.files.is_empty() {
-            return Err("commit your changes first: a pull request takes commits".to_owned());
-        }
-        let branch = status.branch.ok_or("check out a branch first")?;
-        Ok((ws.root().to_owned(), branch))
-    })
-    .await?;
-    let client = github.client.clone();
-    tauri::async_runtime::spawn_blocking(move || {
-        let (_, repo) = dm_github::origin(&root)?
-            .ok_or_else(|| dm_github::GitHubError("the repository has no `origin`".into()))?;
-        let repo =
-            repo.ok_or_else(|| dm_github::GitHubError("`origin` is not on GitHub".into()))?;
-        let base = client.default_branch(&token, &repo)?;
-        if branch == base {
-            return Err(dm_github::GitHubError(format!(
-                "you are on {base}, where pull requests go: make a branch for your changes first"
-            )));
-        }
-        client.push(&root, &branch, Some(&token))?;
-        let title = if title.trim().is_empty() {
-            branch.clone()
-        } else {
-            title
-        };
-        client.pull_request(&token, &repo, &branch, &base, &title, &body)
-    })
-    .await
-    .map_err(|e| e.to_string())?
-    .map_err(|e| e.to_string())
-}
-
 /// Write the script in another format to `path` (where the writer chose), unsaved edits
 /// included. A translation table already there keeps its translations. Never over one of
 /// the project's own files.
@@ -903,6 +875,7 @@ fn app<R: Runtime>(builder: Builder<R>, github: GitHubSession) -> Builder<R> {
             reload,
             edit,
             edit_project_file,
+            new_dialogue_file,
             draft_project_file,
             undo,
             redo,
@@ -923,7 +896,6 @@ fn app<R: Runtime>(builder: Builder<R>, github: GitHubSession) -> Builder<R> {
             github_sign_in_finish,
             github_sign_in_cancel,
             github_sign_out,
-            github_pull_request,
             github_repos,
             github_clone,
             github_clone_stop,
@@ -1128,7 +1100,7 @@ mod tests {
     }
 
     #[test]
-    fn sign_in_and_open_a_pull_request_through_the_commands() {
+    fn sign_in_send_and_open_a_pull_request_through_the_commands() {
         let dir = tempfile::tempdir().unwrap();
         let hub = dir.path().join("hub");
         let origin = git2::Repository::init_bare(hub.join("team/game.git")).unwrap();
@@ -1158,7 +1130,7 @@ mod tests {
             .build()
             .unwrap();
         let no_args = serde_json::json!({});
-        let pull_request = serde_json::json!({ "title": "Rewrite", "body": "" });
+        let send = serde_json::json!({ "title": "Rewrite", "body": "" });
         let session = call(
             &webview,
             "open_project",
@@ -1185,8 +1157,6 @@ mod tests {
                 "account": null
             })
         );
-        let refused = call(&webview, "github_pull_request", pull_request.clone()).unwrap_err();
-        assert_eq!(refused, "sign in to GitHub first");
 
         let sign_in = call(&webview, "github_sign_in_start", no_args.clone()).unwrap();
         assert_eq!(sign_in["user_code"], "ABCD-1234");
@@ -1196,12 +1166,18 @@ mod tests {
         let state = call(&webview, "github_state", no_args.clone()).unwrap();
         assert_eq!(state["account"]["login"], "writer");
 
-        // Pull requests come from a branch, with everything saved and committed.
-        let refused = call(&webview, "github_pull_request", pull_request.clone()).unwrap_err();
-        assert!(
-            refused.as_str().unwrap().contains("you are on main"),
-            "{refused}"
+        // On the branch the team shares, commits go straight to origin.
+        let sent = call(&webview, "team_send", send.clone()).unwrap();
+        assert_eq!(
+            sent,
+            serde_json::json!({ "branch": "main", "pull_request": null })
         );
+        assert_eq!(
+            origin.find_reference("refs/heads/main").unwrap().target(),
+            repo.head().unwrap().target(),
+        );
+
+        // On a branch of the writer's own: sent, and its pull request opened.
         call(
             &webview,
             "git_branch",
@@ -1209,28 +1185,26 @@ mod tests {
         )
         .unwrap();
         call(&webview, "edit", serde_json::json!({ "path": "a.dialogue", "edits": [{ "op": "set_text", "at": at, "text": "Uno." }] })).unwrap();
-        let refused = call(&webview, "github_pull_request", pull_request.clone()).unwrap_err();
-        assert!(
-            refused.as_str().unwrap().starts_with("save your edits"),
-            "{refused}"
-        );
         call(&webview, "save", no_args.clone()).unwrap();
-        let refused = call(&webview, "github_pull_request", pull_request.clone()).unwrap_err();
-        assert!(
-            refused.as_str().unwrap().starts_with("commit your changes"),
-            "{refused}"
-        );
         call(
             &webview,
             "git_commit",
             serde_json::json!({ "paths": ["a.dialogue"], "message": "Uno" }),
         )
         .unwrap();
-
-        let opened = call(&webview, "github_pull_request", pull_request).unwrap();
+        let team = call(&webview, "team_state", serde_json::json!({ "seen": null })).unwrap();
+        assert_eq!(team["shared"], "main");
+        assert_eq!(team["published"], false);
+        assert_eq!(team["outgoing"][0]["summary"], "Uno");
         assert_eq!(
-            opened,
-            serde_json::json!({ "number": 7, "url": "https://github.com/team/game/pull/7", "created": true })
+            team["outgoing"][0]["scenes"],
+            serde_json::json!([{ "path": "a.dialogue", "label": "a" }])
+        );
+
+        let sent = call(&webview, "team_send", send).unwrap();
+        assert_eq!(
+            sent,
+            serde_json::json!({ "branch": "rewrite", "pull_request": { "number": 7, "url": "https://github.com/team/game/pull/7", "created": true } })
         );
         assert_eq!(
             origin
@@ -1240,6 +1214,9 @@ mod tests {
             repo.head().unwrap().target(),
             "pushed"
         );
+        let team = call(&webview, "team_state", serde_json::json!({ "seen": null })).unwrap();
+        assert_eq!(team["published"], true);
+        assert_eq!(team["outgoing"], serde_json::json!([]));
 
         call(&webview, "github_sign_out", no_args.clone()).unwrap();
         let state = call(&webview, "github_state", no_args).unwrap();
@@ -1368,6 +1345,60 @@ mod tests {
         assert!(
             outside.as_str().unwrap().contains("inside the project"),
             "{outside}"
+        );
+    }
+
+    #[test]
+    fn new_files_and_the_team_through_the_commands() {
+        let dir = tempfile::tempdir().unwrap();
+        let app = app(
+            tauri::test::mock_builder(),
+            GitHubSession::new(GitHub::default(), false),
+        )
+        .build(tauri::test::mock_context(tauri::test::noop_assets()))
+        .unwrap();
+        let webview = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
+            .build()
+            .unwrap();
+        call(
+            &webview,
+            "open_project",
+            serde_json::json!({ "path": dir.path() }),
+        )
+        .unwrap();
+        let bad = call(
+            &webview,
+            "new_dialogue_file",
+            serde_json::json!({ "path": "dialogue/intro.dialogue", "scene": "1st" }),
+        )
+        .unwrap_err();
+        assert!(
+            bad.as_str().unwrap().contains("cannot name a scene"),
+            "{bad}"
+        );
+        let session = call(
+            &webview,
+            "new_dialogue_file",
+            serde_json::json!({ "path": "dialogue/intro.dialogue", "scene": "start" }),
+        )
+        .unwrap();
+        assert_eq!(
+            session["state"]["changed"],
+            serde_json::json!(["dialogue/intro.dialogue"])
+        );
+        call(&webview, "save", serde_json::json!({})).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(dir.path().join("dialogue/intro.dialogue")).unwrap(),
+            "~ start\n=> END\n"
+        );
+
+        // Outside git there is no team.
+        let team = call(&webview, "team_state", serde_json::json!({ "seen": null })).unwrap();
+        assert!(team.is_null());
+        let update = call(&webview, "team_update", serde_json::json!({})).unwrap_err();
+        assert!(
+            update.as_str().unwrap().contains("not in a git repository"),
+            "{update}"
         );
     }
 

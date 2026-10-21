@@ -15,6 +15,7 @@
   import SettingsDialog from "./SettingsDialog.svelte";
   import ShareButton from "./ShareButton.svelte";
   import StoryMap from "./StoryMap.svelte";
+  import { Team, provideTeam } from "./team.svelte";
   import WriteView from "./write/WriteView.svelte";
 
   let { view, editor, path = null, openOther }: { view: View; editor?: Editor; path?: string | null; openOther?: () => void } = $props();
@@ -26,6 +27,15 @@
     untrack(() => editor !== undefined),
   );
   provideReader(reader);
+  // The team, through git: in the app, with a project folder open.
+  const team = untrack(() => (editor && path ? new Team(path, editor) : undefined));
+  provideTeam(team);
+  $effect(() => team?.start());
+  // What is not committed changes when files are saved or dropped.
+  $effect(() => {
+    void editor?.state.changed.join();
+    team?.load();
+  });
   $effect(() => {
     reader.view = view;
   });
@@ -115,7 +125,7 @@
       {#if editor}
         <span class="save-state" class:dirty={changed > 0} class:conflict={conflicts > 0}>
           {#if conflicts > 0}
-            <button type="button" class="link" onclick={() => (reviewing = true)}>{t("Changed on disk")}</button>
+            <button type="button" class="link" onclick={() => (reviewing = true)}>{t("Changed on disk: settle it")}</button>
           {:else if changed > 0}
             <button type="button" class="link" onclick={() => (reviewing = true)} title={t("See the changes before saving")}>{plural(changed, "{n} file not saved", "{n} files not saved")}</button>
           {:else}

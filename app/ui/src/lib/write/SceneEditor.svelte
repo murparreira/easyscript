@@ -10,11 +10,14 @@
   import { fileName, walk } from "../model";
   import Notes from "../Notes.svelte";
   import { useReader } from "../reader.svelte";
+  import { ago, sceneKey, useTeam } from "../team.svelte";
   import AddBar from "./AddBar.svelte";
+  import NewFile from "./NewFile.svelte";
   import Steps from "./Steps.svelte";
 
   const reader = useReader();
   const editor = useEditor()!;
+  const team = useTeam();
 
   const label = $derived(reader.current());
   const file = $derived(label ? reader.view.script.files[label.span.file] : undefined);
@@ -50,6 +53,19 @@
   });
   const goesOn = $derived(!last || last.type !== "jump");
   const comesBack = $derived(reader.view.flow.edges.filter((e) => label && e.to === `${label.span.file}:${label.id}` && e.kind !== "fall_through").length);
+
+  // What the team did to this scene: changed it on origin (not here yet), is changing it on
+  // a branch, changed it since the writer last looked.
+  const teamKey = $derived(label && file ? sceneKey(file.path, label.id) : "");
+  const incoming = $derived(team?.incoming.get(teamKey) ?? []);
+  const others = $derived(team?.others.get(teamKey) ?? []);
+  const since = $derived(team?.since.get(teamKey) ?? []);
+  const who = (xs: { author: string }[]) => [...new Set(xs.map((x) => x.author))].join(", ");
+  let clash: string | null = $state(null);
+  async function bringIn() {
+    const done = await team?.bringIn();
+    clash = done && done.conflicts.length > 0 ? t("You and the team changed the same lines in {files}, so nothing was brought in. Commit your changes and settle it in git, or ask a teammate.", { files: done.conflicts.join(", ") }) : null;
+  }
 
   async function remove() {
     if (!label || !file) return;
@@ -99,6 +115,25 @@
         {/if}
       </header>
 
+      {#if incoming.length > 0}
+        <div class="banner in">
+          <p>{t("{who} changed this scene on origin, and your copy does not have it yet. Bring the team's changes in before you write here, so you write on the latest.", { who: who(incoming) })}</p>
+          <button class="btn small primary" type="button" onclick={bringIn} disabled={team?.busy || editor.busy}>{team?.busy ? t("Bringing in…") : t("Bring them in")}</button>
+        </div>
+      {/if}
+      {#if clash}<p class="error">{clash}</p>{/if}
+      {#each others as work (work.branch)}
+        <div class="banner other">
+          <p>{t("{who} is also changing this scene, on the branch {branch} ({when}): “{summary}”. Talk before you both change the same lines.", { who: work.last.mine ? t("You") : work.last.author, branch: work.branch, when: ago(work.last.time), summary: work.last.summary })}</p>
+        </div>
+      {/each}
+      {#if since.length > 0}
+        <div class="banner new">
+          <p>{t("Changed by {who} since you last looked: “{summary}” ({when}).", { who: who(since), summary: since[0].summary, when: ago(since[0].time) })}</p>
+          <button type="button" class="link" onclick={() => team?.seeScene(teamKey)}>{t("Got it")}</button>
+        </div>
+      {/if}
+
       {#if section && (section.title || section.notes.length > 0)}
         <div class="scene-note group">
           <div class="k">{section.title ? t("Part: {title}", { title: section.title }) : t("About this part")}</div>
@@ -132,5 +167,12 @@
     {/key}
   </section>
 {:else}
-  <section class="scene"><p class="nothing">{t("No scenes in this project yet.")}</p></section>
+  <section class="scene">
+    <div class="first-steps">
+      <div class="eyebrow">{t("A new script")}</div>
+      <h1 class="scene-title">{t("No dialogue here yet")}</h1>
+      <p class="lede">{t("Dialogue lives in .dialogue files in the game's folder, as scenes: a scene is what a character says when the game starts it by name. Make the first file and its first scene, then write its lines here and play them on the right.")}</p>
+      <NewFile done={() => {}} first />
+    </div>
+  </section>
 {/if}

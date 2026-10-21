@@ -3,9 +3,11 @@
   import Dialog from "./Dialog.svelte";
   import { LANGUAGES, locale, t } from "./i18n.svelte";
   import { type Theme, useReader } from "./reader.svelte";
+  import { useTeam } from "./team.svelte";
 
   let { close }: { close: () => void } = $props();
   const reader = useReader();
+  const team = useTeam();
   const themes: { id: Theme; name: () => string }[] = [
     { id: "system", name: () => t("Like the system") },
     { id: "light", name: () => t("Light") },
@@ -34,5 +36,12 @@
       <label class="tog"><input type="checkbox" bind:checked={reader.showIds} /> {t("Ids, tags and file names")}</label>
       <label class="tog"><input type="checkbox" bind:checked={reader.showMarks} /> {t("Lines with authorship marks, highlighted")}</label>
     </div>
+    {#if team}
+      <div class="field">
+        <span class="k">{t("The team")}</span>
+        <label class="tog"><input type="checkbox" checked={team.auto} onchange={(e) => team.setAuto(e.currentTarget.checked)} /> {t("Ask origin for the team's changes every few minutes")}</label>
+        <p class="hint">{t("It only asks: nothing of yours is sent, and nothing changes here until you bring the changes in.")}</p>
+      </div>
+    {/if}
   </div>
 </Dialog>

@@ -45,6 +45,12 @@
     untrack(() => restart(asked?.label ?? start));
   });
 
+  // Nothing to play yet (a new project, a scene removed): the scene being written plays.
+  $effect(() => {
+    const current = reader.current()?.id;
+    if (current && !reader.byId.has(untrack(() => start))) untrack(() => restart(current));
+  });
+
   function next() {
     run?.next();
     sync();
@@ -204,8 +210,12 @@
         </div>
       </div>
     {:else}
-      <p class="play-end">{why}</p>
-      <div class="play-actions"><button class="btn primary" type="button" onclick={() => restart()}>{t("Play again")}</button></div>
+      {#if played}
+        <p class="play-end">{why}</p>
+        <div class="play-actions"><button class="btn primary" type="button" onclick={() => restart()}>{t("Play again")}</button></div>
+      {:else}
+        <p class="play-end">{t("Nothing to play yet: write a scene first.")}</p>
+      {/if}
     {/if}
   </div>
 </aside>

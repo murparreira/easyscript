@@ -101,7 +101,7 @@
     });
     const stop = listen("project-changed", async () => {
       try {
-        editor!.receive(await invoke<Session>("reload"));
+        editor!.receive(await invoke<Session>("reload"), true);
       } catch (e) {
         error = String(e);
       }

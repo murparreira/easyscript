@@ -43,11 +43,13 @@
     jump: written(jumpBefore),
   }));
   const before = initial.tags;
-  let speaker = $state(initial.speaker ?? "");
-  let words = $state(initial.words);
-  let tags: Record<string, string | null> = $state({ ...before });
-  let condition = $state(initial.condition ?? "");
-  let goTo = $state(initial.jump ?? "");
+  // Drawn again over the same line (it moved in the file): what the writer had typed.
+  const draft = untrack(() => editor.draft);
+  let speaker = $state(draft?.speaker ?? initial.speaker ?? "");
+  let words = $state(draft?.words ?? initial.words);
+  let tags: Record<string, string | null> = $state({ ...(draft?.tags ?? before) });
+  let condition = $state(draft?.condition ?? initial.condition ?? "");
+  let goTo = $state(draft?.goTo ?? initial.jump ?? "");
 
   const specs = $derived(reader.view.tags);
   const face = $derived(specs.find((s) => s.show === "face" && s.kind === "asset"));
@@ -56,7 +58,10 @@
   const shownByControls = $derived(new Set([face?.name, voice?.name, ...switches.map((s) => s.name)].filter(Boolean)));
   const otherTags = $derived(Object.keys(tags).filter((name) => !shownByControls.has(name)));
 
-  let faceValue = $state(untrack(() => (face && face.name in before ? before[face.name] : null)));
+  let faceValue = $state(untrack(() => (draft ? draft.face : face && face.name in before ? before[face.name] : null)));
+  $effect(() => {
+    editor.draft = { speaker, words, tags: { ...tags }, condition, goTo, face: faceValue };
+  });
   $effect(() => {
     if (!face) return;
     if (faceValue) tags[face.name] = faceValue;

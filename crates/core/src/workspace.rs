@@ -295,6 +295,57 @@ impl Workspace {
         Ok(())
     }
 
+    /// A new dialogue file, unsaved: written when the project is saved, like any edit, and
+    /// undone like one. Refused outside the project, over a file that exists, where the
+    /// project file's sources would not find it, and with a label another file has.
+    pub fn new_file(&mut self, path: &str, text: &str) -> Result<(), EditError> {
+        let path = path.trim().trim_start_matches("./").replace('\\', "/");
+        let inside = !path.is_empty()
+            && Path::new(&path)
+                .components()
+                .all(|c| matches!(c, std::path::Component::Normal(_)));
+        if !inside {
+            return Err(EditError(format!(
+                "`{path}`: give a path inside the project, like dialogue/intro.dialogue"
+            )));
+        }
+        if !path.ends_with(".dialogue") {
+            return Err(EditError(format!(
+                "`{path}`: a dialogue file's name ends in .dialogue"
+            )));
+        }
+        if self.project.file_index(&path).is_some() || self.project.resolve(&path).exists() {
+            return Err(EditError(format!("{path} exists already")));
+        }
+        let compiled = &self.project.compiled;
+        if !compiled.dialogue.is_match(&path) || compiled.exclude.is_match(&path) {
+            return Err(EditError(format!(
+                "the project file's sources leave {path} out: put it with the other dialogue files"
+            )));
+        }
+        for title in edit::titles(text) {
+            if let Some(other) = self
+                .project
+                .files
+                .iter()
+                .find(|f| edit::titles(&f.text).contains(&title))
+            {
+                return Err(EditError(format!(
+                    "there is a label `{title}` in {} already",
+                    other.path
+                )));
+            }
+        }
+        self.set_dialogue(&path, text.to_owned());
+        self.undo.push(Step {
+            path,
+            before: String::new(),
+            after: text.to_owned(),
+        });
+        self.redo.clear();
+        Ok(())
+    }
+
     pub fn undo(&mut self) -> Option<String> {
         let step = self.undo.pop()?;
         self.restore(&step.path, step.before.clone());
@@ -321,13 +372,30 @@ impl Workspace {
     }
 
     fn set_dialogue(&mut self, path: &str, text: String) {
+        // A new file undone to nothing is no file.
+        if !self.disk.contains_key(path) && text.is_empty() {
+            self.edits.remove(path);
+            self.project.files.retain(|f| f.path != path);
+            return;
+        }
         if self.disk.get(path) == Some(&text) {
             self.edits.remove(path);
         } else {
             self.edits.insert(path.to_owned(), text.clone());
         }
-        if let Some(index) = self.project.file_index(path) {
-            self.project.files[index] = SourceFile::new(path.to_owned(), text);
+        let file = SourceFile::new(path.to_owned(), text);
+        match self.project.file_index(path) {
+            Some(index) => self.project.files[index] = file,
+            None => insert_sorted(&mut self.project, file),
+        }
+    }
+
+    /// New files not saved yet, back in a project read again from disk.
+    fn keep_new_files(&self, project: &mut Project) {
+        for (path, text) in &self.edits {
+            if !self.disk.contains_key(path) && project.file_index(path).is_none() {
+                insert_sorted(project, SourceFile::new(path.clone(), text.clone()));
+            }
         }
     }
 
@@ -336,6 +404,7 @@ impl Workspace {
     fn set_config(&mut self, text: String) -> Result<(), EditError> {
         let mut project =
             build(&self.root, &self.config_path, &text).map_err(|e| EditError(e.to_string()))?;
+        self.keep_new_files(&mut project);
         for file in &mut project.files {
             self.disk
                 .entry(file.path.clone())
@@ -392,8 +461,11 @@ impl Workspace {
             self.config_disk = Some(self.config_text.clone());
         }
         for (path, text) in std::mem::take(&mut self.edits) {
-            write_atomically(&self.project.resolve(&path), text.as_bytes())
-                .map_err(|e| SaveError::Io(path.clone(), e))?;
+            let full = self.project.resolve(&path);
+            if let Some(dir) = full.parent() {
+                std::fs::create_dir_all(dir).map_err(|e| SaveError::Io(path.clone(), e))?;
+            }
+            write_atomically(&full, text.as_bytes()).map_err(|e| SaveError::Io(path.clone(), e))?;
             self.disk.insert(path, text);
         }
         self.conflicts.retain(|c| !saved.contains(c));
@@ -464,6 +536,7 @@ impl Workspace {
         let keep = |s: &Step| edited.contains(&s.path) && !moved.contains(&s.path);
         self.undo.retain(keep);
         self.redo.retain(keep);
+        self.keep_new_files(&mut project);
         self.project = project;
         self.disk = disk;
         Ok(())
@@ -519,6 +592,13 @@ impl Workspace {
         };
         Some(diff(path, &read, &now))
     }
+}
+
+fn insert_sorted(project: &mut Project, file: SourceFile) {
+    let at = project
+        .files
+        .partition_point(|f| f.path.as_str() < file.path.as_str());
+    project.files.insert(at, file);
 }
 
 /// The project from a project file's text (empty: the defaults).
