@@ -1,0 +1,2 @@
+19: `wait` (use [wait=...] in a line): kept as a comment
+27: a variable declaration (the game's state must have it): kept as a comment

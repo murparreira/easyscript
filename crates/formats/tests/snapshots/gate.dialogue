@@ -1,0 +1,27 @@
+~ Start
+# Yarn tags: intro
+# The guard at the gate.
+Guard: Halt! Who goes there? [#stern] [ID:g01]
+- I'm a friend. [ID:g02]
+	Guard: Pass, friend.
+	set friend = true
+- None of your business. [if rude == true]
+	Guard: Then turn back.
+	=> Gate
+if friend
+	Guard: Welcome, {{name}}.
+elif gold > 10
+	Guard: Nice purse.
+else
+	Guard: Move along.
+# <<wait 1>>
+The gate creaks\: slowly.
+if friend
+	Guard: Off you go. [ID:g03]
+=> Gate
+
+~ Gate
+The gate opens.
+# <<declare $gold = 0>>
+=>< Start
+=> END!

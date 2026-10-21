@@ -1,0 +1,444 @@
+{
+  "format": "dialogue-maker/script",
+  "version": 1,
+  "name": "Ferry",
+  "characters": [
+    {
+      "id": "captain",
+      "name": "The Captain",
+      "speakers": [
+        "Captain"
+      ],
+      "role": "Runs the ferry.",
+      "portrait": null,
+      "voices": [
+        "calm",
+        "happy",
+        "angry"
+      ]
+    },
+    {
+      "id": "deckhand",
+      "name": "Deckhand",
+      "speakers": [
+        "Deckhand"
+      ],
+      "role": null,
+      "portrait": null,
+      "voices": []
+    }
+  ],
+  "places": [
+    {
+      "id": "deck",
+      "name": "The Deck",
+      "group": "Boat"
+    }
+  ],
+  "flags": [
+    {
+      "name": "boarded",
+      "meaning": "The player is on the ferry.",
+      "set_in": [
+        "boarding"
+      ],
+      "read_in": [
+        "boarding"
+      ]
+    },
+    {
+      "name": "ticket",
+      "meaning": null,
+      "set_in": [],
+      "read_in": [
+        "boarding"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "dialogue/ferry.dialogue",
+      "preamble": [],
+      "labels": [
+        {
+          "id": "boarding",
+          "line": 3,
+          "place": "deck",
+          "section": "CAPTAIN",
+          "notes": [
+            "The captain greets the player. Keep it short."
+          ],
+          "marks": [],
+          "body": [
+            {
+              "line": 5,
+              "type": "line",
+              "speaker": "Captain",
+              "character": "captain",
+              "text": "Welcome aboard!",
+              "plain": "Welcome aboard!",
+              "tags": [
+                {
+                  "name": "mood",
+                  "value": "happy"
+                }
+              ],
+              "id": "BOARD_1",
+              "concurrent": false,
+              "jump": null
+            },
+            {
+              "line": 6,
+              "type": "line",
+              "speaker": "Deckhand",
+              "character": "deckhand",
+              "text": "Tickets, please.",
+              "plain": "Tickets, please.",
+              "tags": [
+                {
+                  "name": "mood",
+                  "value": "tired"
+                }
+              ],
+              "id": null,
+              "concurrent": false,
+              "jump": null
+            },
+            {
+              "line": 7,
+              "type": "line",
+              "speaker": "Captain",
+              "character": "captain",
+              "text": "Don't mind him.",
+              "plain": "Don't mind him.",
+              "tags": [
+                {
+                  "name": "mood",
+                  "value": "happy"
+                }
+              ],
+              "id": null,
+              "concurrent": true,
+              "jump": null
+            },
+            {
+              "line": 8,
+              "type": "line",
+              "speaker": null,
+              "character": null,
+              "text": "The engines rumble.",
+              "plain": "The engines rumble.",
+              "tags": [],
+              "id": null,
+              "concurrent": false,
+              "jump": null
+            },
+            {
+              "line": 10,
+              "type": "menu",
+              "choices": [
+                {
+                  "line": 10,
+                  "notes": [
+                    "Whether the player paid."
+                  ],
+                  "speaker": null,
+                  "text": "Show the ticket",
+                  "plain": "Show the ticket",
+                  "tags": [],
+                  "id": "BOARD_SHOW",
+                  "condition": "has_flag(\"ticket\")",
+                  "jump": null,
+                  "body": [
+                    {
+                      "line": 11,
+                      "type": "line",
+                      "speaker": "Deckhand",
+                      "character": "deckhand",
+                      "text": "All good.",
+                      "plain": "All good.",
+                      "tags": [
+                        {
+                          "name": "mood",
+                          "value": "tired"
+                        }
+                      ],
+                      "id": null,
+                      "concurrent": false,
+                      "jump": null
+                    },
+                    {
+                      "line": 12,
+                      "type": "effect",
+                      "keyword": "do",
+                      "expression": "set_flag(\"boarded\")"
+                    }
+                  ]
+                },
+                {
+                  "line": 13,
+                  "speaker": null,
+                  "text": "Sneak past",
+                  "plain": "Sneak past",
+                  "tags": [],
+                  "id": null,
+                  "condition": null,
+                  "jump": null,
+                  "body": [
+                    {
+                      "line": 14,
+                      "type": "line",
+                      "speaker": "Captain",
+                      "character": "captain",
+                      "text": "I saw that!",
+                      "plain": "I saw that!",
+                      "tags": [
+                        {
+                          "name": "mood",
+                          "value": "angry"
+                        },
+                        {
+                          "name": "thought",
+                          "value": null
+                        }
+                      ],
+                      "id": null,
+                      "concurrent": false,
+                      "jump": null
+                    },
+                    {
+                      "line": 15,
+                      "type": "jump",
+                      "to": "label",
+                      "label": "caught",
+                      "returns": false
+                    }
+                  ]
+                },
+                {
+                  "line": 16,
+                  "speaker": null,
+                  "text": "Leave",
+                  "plain": "Leave",
+                  "tags": [],
+                  "id": null,
+                  "condition": null,
+                  "jump": {
+                    "to": "end",
+                    "returns": false
+                  },
+                  "body": []
+                }
+              ]
+            },
+            {
+              "line": 17,
+              "type": "branch",
+              "arms": [
+                {
+                  "line": 17,
+                  "keyword": "if",
+                  "condition": "has_flag(\"boarded\")",
+                  "body": [
+                    {
+                      "line": 18,
+                      "type": "line",
+                      "speaker": "Captain",
+                      "character": "captain",
+                      "text": "Enjoy the trip, {{player_name}}.",
+                      "plain": "Enjoy the trip, {{player_name}}.",
+                      "tags": [],
+                      "id": null,
+                      "concurrent": false,
+                      "jump": null
+                    }
+                  ]
+                },
+                {
+                  "line": 19,
+                  "keyword": "else",
+                  "condition": null,
+                  "body": [
+                    {
+                      "line": 20,
+                      "type": "line",
+                      "speaker": "Captain",
+                      "character": "captain",
+                      "text": "[[Hm|Well]], suit yourself.",
+                      "plain": "Hm/Well, suit yourself.",
+                      "tags": [],
+                      "id": null,
+                      "concurrent": false,
+                      "jump": null
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "line": 21,
+              "type": "jump",
+              "to": "label",
+              "label": "crossing",
+              "returns": false
+            }
+          ]
+        },
+        {
+          "id": "caught",
+          "line": 23,
+          "place": "deck",
+          "section": "CAPTAIN",
+          "notes": [],
+          "marks": [],
+          "body": [
+            {
+              "line": 24,
+              "type": "line",
+              "speaker": "Captain",
+              "character": "captain",
+              "text": "Off my *boat*.",
+              "plain": "Off my *boat*.",
+              "tags": [
+                {
+                  "name": "mood",
+                  "value": "angry"
+                }
+              ],
+              "id": null,
+              "concurrent": false,
+              "jump": null
+            },
+            {
+              "line": 25,
+              "type": "jump",
+              "to": "end_conversation",
+              "returns": false
+            }
+          ]
+        },
+        {
+          "id": "crossing",
+          "line": 27,
+          "place": "deck",
+          "section": "CAPTAIN",
+          "notes": [],
+          "marks": [],
+          "body": [
+            {
+              "line": 28,
+              "type": "random",
+              "options": [
+                {
+                  "line": 28,
+                  "weight": null,
+                  "condition": null,
+                  "body": [
+                    {
+                      "line": 28,
+                      "type": "line",
+                      "speaker": "Gull",
+                      "character": null,
+                      "text": "Squawk.",
+                      "plain": "Squawk.",
+                      "tags": [],
+                      "id": null,
+                      "concurrent": false,
+                      "jump": null
+                    }
+                  ]
+                },
+                {
+                  "line": 29,
+                  "weight": "2",
+                  "condition": null,
+                  "body": [
+                    {
+                      "line": 29,
+                      "type": "line",
+                      "speaker": "Gull",
+                      "character": null,
+                      "text": "Squawk squawk.",
+                      "plain": "Squawk squawk.",
+                      "tags": [],
+                      "id": null,
+                      "concurrent": false,
+                      "jump": null
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "line": 30,
+              "type": "match",
+              "subject": "weather()",
+              "arms": [
+                {
+                  "line": 31,
+                  "keyword": "when",
+                  "condition": "\"storm\"",
+                  "body": [
+                    {
+                      "line": 32,
+                      "type": "line",
+                      "speaker": "Captain",
+                      "character": "captain",
+                      "text": "Hold on!",
+                      "plain": "Hold on!",
+                      "tags": [
+                        {
+                          "name": "mood",
+                          "value": "angry"
+                        }
+                      ],
+                      "id": null,
+                      "concurrent": false,
+                      "jump": null
+                    }
+                  ]
+                },
+                {
+                  "line": 33,
+                  "keyword": "else",
+                  "condition": null,
+                  "body": [
+                    {
+                      "line": 34,
+                      "type": "line",
+                      "speaker": "Captain",
+                      "character": "captain",
+                      "text": "Smooth sailing.",
+                      "plain": "Smooth sailing.",
+                      "tags": [
+                        {
+                          "name": "mood",
+                          "value": "calm"
+                        }
+                      ],
+                      "id": null,
+                      "concurrent": false,
+                      "jump": null
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "line": 35,
+              "type": "effect",
+              "keyword": "set",
+              "expression": "crossed = true"
+            },
+            {
+              "line": 36,
+              "type": "jump",
+              "to": "end",
+              "returns": false
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

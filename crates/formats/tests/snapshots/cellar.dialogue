@@ -1,0 +1,21 @@
+# Imported from Twine: The Cellar
+# The story starts at ~ Top_of_the_stairs.
+
+~ Top_of_the_stairs
+# Twine tags: start
+The stairs go down into the dark.
+Ghost: Who goes there?
+set courage = 1
+You have {{courage}} courage.
+- Go down => The_cellar
+- Run away => Outside
+
+~ The_cellar
+It smells of wine\: old and sour.
+# <<if $courage gt 0>>You feel brave.<</if>>
+- Back up => Top_of_the_stairs
+- Nowhere => END
+
+~ Outside
+{{""}}do you hear that? The end.
+=> END

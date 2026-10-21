@@ -13,6 +13,7 @@ path = "src/main.rs"
 [dependencies]
 clap = { version = "4.6.7", features = ["derive"] }
 dm-core.workspace = true
+dm-formats.workspace = true
 serde_json = "1.0.154"
 
 [lints]

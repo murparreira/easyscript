@@ -1,0 +1,30 @@
+title: Start
+tags: intro
+---
+// The guard at the gate.
+Guard: Halt! Who goes there? #line:g01 #stern
+-> I'm a friend. #line:g02
+    Guard: Pass, friend.
+    <<set $friend to true>>
+-> None of your business. <<if $rude is true>>
+    Guard: Then turn back.
+    <<jump Gate>>
+<<if $friend>>
+    Guard: Welcome, {$name}.
+<<elseif $gold gt 10>>
+    Guard: Nice purse.
+<<else>>
+    Guard: Move along.
+<<endif>>
+<<wait 1>>
+The gate creaks: slowly.
+Guard: Off you go. <<if $friend>> #line:g03
+<<jump Gate>>
+===
+title: Gate
+---
+The gate opens.
+<<declare $gold = 0>>
+<<detour Start>>
+<<stop>>
+===

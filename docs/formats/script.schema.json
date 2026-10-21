@@ -1,0 +1,714 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "dialogue-maker script",
+  "description": "A project's whole script.",
+  "type": "object",
+  "properties": {
+    "characters": {
+      "description": "The characters of the project file, in its order.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Character"
+      }
+    },
+    "files": {
+      "description": "The dialogue files, in path order.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/File"
+      }
+    },
+    "flags": {
+      "description": "Every flag set or read, by name.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Flag"
+      }
+    },
+    "format": {
+      "description": "Always `dialogue-maker/script`.",
+      "type": "string"
+    },
+    "name": {
+      "description": "The project's name, from its project file.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "places": {
+      "description": "The places of the project file, in the order a player meets them.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Place"
+      }
+    },
+    "version": {
+      "description": "The format's version: 1.",
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "format",
+    "version",
+    "characters",
+    "places",
+    "flags",
+    "files"
+  ],
+  "$defs": {
+    "Arm": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Node"
+          }
+        },
+        "condition": {
+          "description": "The condition (or `when` value); none on `else`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "keyword": {
+          "description": "`if`, `elif`, `else` or `when`.",
+          "type": "string"
+        },
+        "line": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "line",
+        "keyword",
+        "body"
+      ]
+    },
+    "Character": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "description": "The name to show.",
+          "type": "string"
+        },
+        "portrait": {
+          "description": "The portrait, relative to the project root.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "role": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "speakers": {
+          "description": "The speaker names the dialogue uses for them.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "voices": {
+          "description": "The voice moods recorded for them.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "speakers",
+        "voices"
+      ]
+    },
+    "Choice": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "description": "What plays when it is picked.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Node"
+          }
+        },
+        "condition": {
+          "description": "Offered only when this holds (`[if ...]`).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "jump": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Jump"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "line": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "plain": {
+          "description": "The words without markup.",
+          "type": "string"
+        },
+        "speaker": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Tag"
+          }
+        },
+        "text": {
+          "description": "The words as written, markup included.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "line",
+        "text",
+        "plain",
+        "tags",
+        "body"
+      ]
+    },
+    "File": {
+      "type": "object",
+      "properties": {
+        "labels": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Label"
+          }
+        },
+        "path": {
+          "description": "Relative to the project root, with `/`.",
+          "type": "string"
+        },
+        "preamble": {
+          "description": "What plays when the file starts from the top, before its first label.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Node"
+          }
+        }
+      },
+      "required": [
+        "path",
+        "preamble",
+        "labels"
+      ]
+    },
+    "Flag": {
+      "type": "object",
+      "properties": {
+        "meaning": {
+          "description": "What it means, from the project file.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "read_in": {
+          "description": "Labels that read it.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "set_in": {
+          "description": "Labels that set it.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "name",
+        "set_in",
+        "read_in"
+      ]
+    },
+    "Jump": {
+      "description": "Where the dialogue goes next.",
+      "type": "object",
+      "properties": {
+        "expression": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "label": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "returns": {
+          "description": "Jump, then come back (`=><`).",
+          "type": "boolean",
+          "default": false
+        },
+        "to": {
+          "description": "`label` (with `label`), `end` (this title's flow ends), `end_conversation`, or\n`expression` (a label computed at run time, with `expression`).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "to"
+      ]
+    },
+    "Label": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Node"
+          }
+        },
+        "id": {
+          "description": "The title (`~ id`): what jumps name.",
+          "type": "string"
+        },
+        "line": {
+          "description": "The line of the title in the file, from 1.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "marks": {
+          "description": "Authorship marks on the title.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Mark"
+          }
+        },
+        "notes": {
+          "description": "Comments before the title.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "place": {
+          "description": "The place it plays in (an id from `places`).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "section": {
+          "description": "The section it is under (a header comment the project file names).",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "line",
+        "notes",
+        "marks",
+        "body"
+      ]
+    },
+    "Line": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "description": "The character id the speaker belongs to, from the project file.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "concurrent": {
+          "description": "Shown together with the line before (`| line`).",
+          "type": "boolean",
+          "default": false
+        },
+        "id": {
+          "description": "The static line id (`[ID:...]`), the translation key.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "jump": {
+          "description": "A jump at the end of the line.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Jump"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "plain": {
+          "description": "The words without markup, random options as `a/b`.",
+          "type": "string"
+        },
+        "speaker": {
+          "description": "The speaker as written; none for narration.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tags": {
+          "description": "`[#name=value]` tags, in order. `value` is null for a tag with none.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Tag"
+          }
+        },
+        "text": {
+          "description": "The words as written: Dialogue Manager's markup (`[wave]`, `{{name}}`, `[[a|b]]`,\n`[if ...]`) included.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "plain",
+        "tags"
+      ]
+    },
+    "Mark": {
+      "description": "Who wrote what: a comment the project file names as a mark.",
+      "type": "object",
+      "properties": {
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "who": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "who"
+      ]
+    },
+    "Node": {
+      "description": "One step of a label. Every node has `type` and `line` (in the file, from 1); `notes`\nand `marks` are the comments right before it.",
+      "type": "object",
+      "properties": {
+        "line": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "marks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Mark"
+          }
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "oneOf": [
+        {
+          "description": "A line of dialogue, spoken (`speaker`) or narrated.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "line"
+            }
+          },
+          "$ref": "#/$defs/Line",
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "description": "Choices shown together.",
+          "type": "object",
+          "properties": {
+            "choices": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Choice"
+              }
+            },
+            "type": {
+              "type": "string",
+              "const": "menu"
+            }
+          },
+          "required": [
+            "type",
+            "choices"
+          ]
+        },
+        {
+          "description": "`if` / `elif` / `else`: the first arm whose condition holds plays.",
+          "type": "object",
+          "properties": {
+            "arms": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Arm"
+              }
+            },
+            "type": {
+              "type": "string",
+              "const": "branch"
+            }
+          },
+          "required": [
+            "type",
+            "arms"
+          ]
+        },
+        {
+          "description": "`match subject`, with `when` arms (an arm with no condition is the `else`).",
+          "type": "object",
+          "properties": {
+            "arms": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Arm"
+              }
+            },
+            "subject": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "match"
+            }
+          },
+          "required": [
+            "type",
+            "subject",
+            "arms"
+          ]
+        },
+        {
+          "description": "Plays its body again while the condition holds.",
+          "type": "object",
+          "properties": {
+            "body": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Node"
+              }
+            },
+            "condition": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "while"
+            }
+          },
+          "required": [
+            "type",
+            "condition",
+            "body"
+          ]
+        },
+        {
+          "description": "One of the options, at random (`%` lines).",
+          "type": "object",
+          "properties": {
+            "options": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/RandomOption"
+              }
+            },
+            "type": {
+              "type": "string",
+              "const": "random"
+            }
+          },
+          "required": [
+            "type",
+            "options"
+          ]
+        },
+        {
+          "description": "Game code: `do`, `set`...",
+          "type": "object",
+          "properties": {
+            "expression": {
+              "type": "string"
+            },
+            "keyword": {
+              "description": "`do`, `do!`, `set`, `$>` or `$>>`.",
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "effect"
+            }
+          },
+          "required": [
+            "type",
+            "keyword",
+            "expression"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "jump"
+            }
+          },
+          "$ref": "#/$defs/Jump",
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "description": "A title inside a block: a jump target.",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "anchor"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ]
+        }
+      ],
+      "required": [
+        "line"
+      ]
+    },
+    "Place": {
+      "type": "object",
+      "properties": {
+        "group": {
+          "description": "A district, a chapter.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "RandomOption": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Node"
+          }
+        },
+        "condition": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "line": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "weight": {
+          "description": "Relative weight (`%2`); none is 1.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "line",
+        "body"
+      ]
+    },
+    "Tag": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "value": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  }
+}

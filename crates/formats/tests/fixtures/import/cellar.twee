@@ -1,0 +1,30 @@
+:: StoryTitle
+The Cellar
+
+:: StoryData
+{
+  "ifid": "D674C58C-DEFA-4F70-B7A2-27742230C0FC",
+  "format": "SugarCube",
+  "format-version": "2.36.1",
+  "start": "Top of the stairs"
+}
+
+:: Top of the stairs [start] {"position":"100,100"}
+The stairs go down into the dark.
+Ghost: Who goes there?
+<<set $courage to 1>>
+You have $courage courage.
+[[Go down->The cellar]]
+[[Run away|Outside]]
+
+:: The cellar {"position":"300,100"}
+It smells of wine: old and sour.
+<<if $courage gt 0>>You feel brave.<</if>>
+[[Top of the stairs<-Back up]]
+[[Nowhere]]
+
+:: Outside
+do you hear that? The end.
+
+:: Code [script]
+window.x = 1;

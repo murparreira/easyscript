@@ -1,0 +1,13 @@
+character,mood,thought,text,context,id,label,file,line
+The Captain,calm,,Smooth sailing.,,,crossing,dialogue/ferry.dialogue,34
+The Captain,happy,,Welcome aboard!,,BOARD_1,boarding,dialogue/ferry.dialogue,5
+The Captain,happy,,Don't mind him.,"Deckhand: Tickets, please.",,boarding,dialogue/ferry.dialogue,7
+The Captain,angry,yes,I saw that!,(choice): Sneak past,,boarding,dialogue/ferry.dialogue,14
+The Captain,angry,,Off my *boat*.,,,caught,dialogue/ferry.dialogue,24
+The Captain,angry,,Hold on!,,,crossing,dialogue/ferry.dialogue,32
+The Captain,,,"Enjoy the trip, {{player_name}}.",The engines rumble.,,boarding,dialogue/ferry.dialogue,18
+The Captain,,,"Hm/Well, suit yourself.",The engines rumble.,,boarding,dialogue/ferry.dialogue,20
+Deckhand,tired,,"Tickets, please.",Captain: Welcome aboard!,,boarding,dialogue/ferry.dialogue,6
+Deckhand,tired,,All good.,(choice): Show the ticket,,boarding,dialogue/ferry.dialogue,11
+Gull,,,Squawk.,,,crossing,dialogue/ferry.dialogue,28
+Gull,,,Squawk squawk.,,,crossing,dialogue/ferry.dialogue,29

@@ -1,0 +1,17 @@
+keys,en,pt_BR,_character,_notes
+BOARD_1,Welcome aboard!,,Captain,The captain greets the player. Keep it short.
+"Tickets, please.","Tickets, please.",,Deckhand,
+Don't mind him.,Don't mind him.,,Captain,
+The engines rumble.,The engines rumble.,,,
+BOARD_SHOW,Show the ticket,,(response),
+All good.,All good.,,Deckhand,
+Sneak past,Sneak past,,(response),
+I saw that!,I saw that!,,Captain,
+Leave,Leave,,(response),
+"Enjoy the trip, {{player_name}}.","Enjoy the trip, {{player_name}}.",,Captain,
+"[[Hm|Well]], suit yourself.","[[Hm|Well]], suit yourself.",,Captain,
+Off my *boat*.,Off my *boat*.,,Captain,
+Squawk.,Squawk.,,Gull,
+Squawk squawk.,Squawk squawk.,,Gull,
+Hold on!,Hold on!,,Captain,
+Smooth sailing.,Smooth sailing.,,Captain,

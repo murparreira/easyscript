@@ -1,0 +1,5 @@
+1: a declaration (the game's state must have it): kept as a comment
+7: choices offered once only (`*`) are offered every time
+40: glue (`<>`) is left out: the lines stay apart
+41: a thread: kept as a comment
+44: the function `double` (and its lines): kept as a comment

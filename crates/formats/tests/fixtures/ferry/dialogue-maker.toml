@@ -1,0 +1,36 @@
+name = "Ferry"
+section_header = '^# =+ (?P<title>.*?) *=*$'
+
+[[places]]
+id = "deck"
+name = "The Deck"
+group = "Boat"
+files = ["dialogue/ferry.dialogue"]
+
+[[characters]]
+id = "captain"
+name = "The Captain"
+speakers = ["Captain"]
+role = "Runs the ferry."
+voices = ["calm", "happy", "angry"]
+
+[[characters]]
+id = "deckhand"
+name = "Deckhand"
+speakers = ["Deckhand"]
+
+[tags.mood]
+kind = "enum"
+values = ["calm", "happy", "angry", "tired"]
+show = "voice"
+
+[tags.thought]
+kind = "flag"
+show = "thought"
+
+[flags]
+set = ["set_flag"]
+read = ["has_flag"]
+
+[flags.meanings]
+boarded = "The player is on the ferry."

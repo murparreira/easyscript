@@ -1,11 +1,11 @@
-//! `dialogue-maker check | stats | build`. `export` arrives with M8.
+//! `dialogue-maker check | stats | build | export | import | init`.
 
 use std::fmt::Write as _;
 use std::io::Write as _;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use dm_core::{Project, Severity};
 
 /// A workbench for game scripts: reads a project's dialogue files where they live.
@@ -45,6 +45,37 @@ enum Command {
         #[arg(long, hide = true, requires = "json")]
         editing: bool,
     },
+    /// Write the script in another format: JSON for other tools, a translation table, voice
+    /// scripts, a screenplay.
+    Export {
+        /// What to write.
+        format: ExportFormat,
+        #[command(flatten)]
+        project: ProjectArgs,
+        /// Where to write it; standard output when not given. A translation table already
+        /// there keeps its translations.
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+        /// translation: the locale the script is written in.
+        #[arg(long, default_value = "en")]
+        locale: String,
+        /// translation: a column for this locale's translations (again for more).
+        #[arg(long = "translate-to", value_name = "LOCALE")]
+        translate_to: Vec<String>,
+        /// voice: only this character (an id from the project file, or a speaker).
+        #[arg(long)]
+        character: Option<String>,
+    },
+    /// Convert a Twine (`.twee`), Yarn Spinner (`.yarn`) or Ink (`.ink`) script into a
+    /// Dialogue Manager file. What does not convert is kept as comments, and listed.
+    Import {
+        /// The script to convert.
+        file: PathBuf,
+        /// The `.dialogue` file to write (never over one that exists); standard output when
+        /// not given.
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+    },
     /// Draft a project file (`dialogue-maker.toml`) for a project that has none, from what
     /// its dialogue says: characters, tags, flag functions, section headers.
     Init {
@@ -63,6 +94,33 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum ExportFormat {
+    /// The whole script as JSON, in a documented format (docs/formats).
+    Json,
+    /// Dialogue Manager's translation CSV, which Godot imports.
+    Translation,
+    /// Each character's lines by mood, as Markdown.
+    Voice,
+    /// Every spoken line as a recording sheet (CSV).
+    VoiceCsv,
+    /// A screenplay, in Fountain.
+    Fountain,
+}
+
+impl From<ExportFormat> for dm_formats::export::Format {
+    fn from(f: ExportFormat) -> Self {
+        use dm_formats::export::Format;
+        match f {
+            ExportFormat::Json => Format::Json,
+            ExportFormat::Translation => Format::Translation,
+            ExportFormat::Voice => Format::Voice,
+            ExportFormat::VoiceCsv => Format::VoiceCsv,
+            ExportFormat::Fountain => Format::Fountain,
+        }
+    }
 }
 
 #[derive(Args)]
@@ -159,6 +217,98 @@ fn main() -> ExitCode {
                 view.stats.lines,
                 view.problems.len()
             );
+            ExitCode::SUCCESS
+        }
+        Command::Export {
+            format,
+            project,
+            output,
+            locale,
+            translate_to,
+            character,
+        } => {
+            let project = match project.load() {
+                Ok(p) => p,
+                Err(code) => return code,
+            };
+            let script = dm_core::lower(&project);
+            let existing = output
+                .as_ref()
+                .and_then(|o| std::fs::read_to_string(o).ok());
+            let options = dm_formats::export::Options {
+                locale: Some(locale),
+                extra_locales: translate_to,
+                character,
+            };
+            let text = match dm_formats::export::render(
+                format.into(),
+                &project,
+                &script,
+                &options,
+                existing.as_deref(),
+            ) {
+                Ok(text) => text,
+                Err(e) => {
+                    eprintln!("dialogue-maker: {e}");
+                    return ExitCode::from(2);
+                }
+            };
+            match output {
+                None => print(&text),
+                Some(output) => {
+                    if let Err(e) = std::fs::write(&output, &text) {
+                        eprintln!("dialogue-maker: {}: {e}", output.display());
+                        return ExitCode::from(2);
+                    }
+                    eprintln!("wrote {}", output.display());
+                }
+            }
+            ExitCode::SUCCESS
+        }
+        Command::Import { file, output } => {
+            let Some(source) = dm_formats::import::Source::of(&file) else {
+                eprintln!(
+                    "dialogue-maker: {}: not a .twee, .yarn or .ink file",
+                    file.display()
+                );
+                return ExitCode::from(2);
+            };
+            let text = match std::fs::read_to_string(&file) {
+                Ok(t) => t,
+                Err(e) => {
+                    eprintln!("dialogue-maker: {}: {e}", file.display());
+                    return ExitCode::from(2);
+                }
+            };
+            let imported = dm_formats::import::import(source, &text);
+            for w in &imported.warnings {
+                eprintln!("{}:{}: {}", file.display(), w.line, w.message);
+            }
+            match output {
+                None => print(&imported.text),
+                Some(output) => {
+                    let written = std::fs::OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .open(&output)
+                        .and_then(|mut f| f.write_all(imported.text.as_bytes()));
+                    if let Err(e) = written {
+                        let why = if e.kind() == std::io::ErrorKind::AlreadyExists {
+                            "it exists; it is left as it is".to_owned()
+                        } else {
+                            e.to_string()
+                        };
+                        eprintln!("dialogue-maker: {}: {why}", output.display());
+                        return ExitCode::from(2);
+                    }
+                    eprintln!(
+                        "wrote {} ({} {})",
+                        output.display(),
+                        imported.warnings.len(),
+                        plural(imported.warnings.len(), "warning")
+                    );
+                }
+            }
             ExitCode::SUCCESS
         }
         Command::Init { path, stdout } => {

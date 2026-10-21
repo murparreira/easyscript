@@ -1,0 +1,36 @@
+# === CAPTAIN ===
+
+~ boarding
+## The captain greets the player. Keep it short.
+Captain: Welcome aboard! [#mood=happy] [ID:BOARD_1]
+Deckhand: Tickets, please. [#mood=tired]
+| Captain: Don't mind him. [#mood=happy]
+The engines rumble.
+# Whether the player paid.
+- Show the ticket [if has_flag("ticket")] [ID:BOARD_SHOW]
+	Deckhand: All good. [#mood=tired]
+	do set_flag("boarded")
+- Sneak past
+	Captain: I saw that! [#mood=angry, thought]
+	=> caught
+- Leave => END
+if has_flag("boarded")
+	Captain: Enjoy the trip, {{player_name}}.
+else
+	Captain: [[Hm|Well]], suit yourself.
+=> crossing
+
+~ caught
+Captain: Off my *boat*. [#mood=angry]
+=> END!
+
+~ crossing
+% Gull: Squawk.
+%2 Gull: Squawk squawk.
+match weather()
+	when "storm"
+		Captain: Hold on! [#mood=angry]
+	else
+		Captain: Smooth sailing. [#mood=calm]
+set crossed = true
+=> END

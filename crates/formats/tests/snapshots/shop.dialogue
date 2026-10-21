@@ -1,0 +1,53 @@
+# VAR gold = 0
+
+~ begin
+=> start
+
+~ start
+Bob: Hello there! [#happy]
+- Say hi
+	Hi, Bob.
+	Bob: Nice to see you.
+	set gold = gold + 5
+- Ask for money [if gold > 10]
+	Ask for money
+	Bob: No way.
+	=> shop
+- Leave
+	~ start_leave
+	Leave
+	=> END!
+Bob: Anyway, you have {{gold}} coins, [if gold > 5]rich[else]poor[/if].
+if gold > 3
+	Bob: Rich!
+else
+	Bob: Poor.
+match gold
+	when 0
+		Bob: Broke.
+	else
+		Bob: Not broke.
+=> shop
+
+~ shop
+
+~ shop_counter
+Shopkeeper: What do you want? [[Hi|Hello]].
+if gold > 100
+	Shopkeeper: Big spender.
+elif gold > 10 and gold < 50
+	Shopkeeper: Welcome.
+else
+	Shopkeeper: Out.
+set gold += 1
+do buy("apple")
+=>< shop_visit
+=> END
+
+~ shop_visit
+Shopkeeper: Look around please.
+# <- chatter
+=> END
+
+# === function double(x) ===
+# ~ return x * 2

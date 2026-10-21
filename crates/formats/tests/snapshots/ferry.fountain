@@ -1,0 +1,104 @@
+Title: Ferry
+Credit: exported by dialogue-maker
+
+# dialogue/ferry.dialogue
+
+## CAPTAIN
+
+.BOARDING - THE DECK
+
+[[The captain greets the player. Keep it short.]]
+
+@THE CAPTAIN
+(happy)
+Welcome aboard!
+
+@DECKHAND
+(tired)
+Tickets, please.
+
+@THE CAPTAIN ^
+(happy)
+Don't mind him.
+
+!The engines rumble.
+
+!— The player chooses:
+
+!— "Show the ticket" (only if has_flag("ticket"))
+
+@DECKHAND
+(tired)
+All good.
+
+[[do set_flag("boarded")]]
+
+!— "Sneak past"
+
+@THE CAPTAIN
+(angry, thinking)
+I saw that!
+
+!→ CAUGHT
+
+!— "Leave"
+
+!→ End.
+
+!— (end of choices)
+
+!— If has_flag("boarded"):
+
+@THE CAPTAIN
+Enjoy the trip, {{player_name}}.
+
+!— Otherwise:
+
+@THE CAPTAIN
+Hm/Well, suit yourself.
+
+!— (end)
+
+!→ CROSSING
+
+.CAUGHT - THE DECK
+
+@THE CAPTAIN
+(angry)
+Off my *boat*.
+
+!→ End of the conversation.
+
+.CROSSING - THE DECK
+
+!— One of these, at random:
+
+!— 1.
+
+@GULL
+Squawk.
+
+!— 2. (weight 2)
+
+@GULL
+Squawk squawk.
+
+!— (end)
+
+!— When weather() is "storm":
+
+@THE CAPTAIN
+(angry)
+Hold on!
+
+!— Otherwise:
+
+@THE CAPTAIN
+(calm)
+Smooth sailing.
+
+!— (end)
+
+[[set crossed = true]]
+
+!→ End.
