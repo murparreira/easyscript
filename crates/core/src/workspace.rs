@@ -409,8 +409,10 @@ impl Workspace {
     }
 
     /// Read the project again after files changed on disk. Files without unsaved edits take
-    /// what is on disk; files with them keep the edits, and if their file changed on disk
-    /// they are marked as conflicts (saving them is refused until they are discarded).
+    /// what is on disk. Files with them keep the edits: when their file changed on disk
+    /// too (a teammate's change brought in, the Godot editor), the two are merged when they
+    /// change different lines; when they change the same lines, the file is marked as a
+    /// conflict and saving it is refused until the writer picks a side ([`Self::resolve`]).
     pub fn refresh(&mut self) -> Result<(), LoadError> {
         let config_now = std::fs::read_to_string(&self.config_path).ok();
         if !self.config_changed() {
@@ -421,33 +423,101 @@ impl Workspace {
         }
         let mut project = build(&self.root, &self.config_path, &self.config_text)?;
         let mut disk = BTreeMap::new();
+        // Files whose edits now sit on a new version: their steps would undo it.
+        let mut moved = Vec::new();
         for file in &mut project.files {
-            match self.edits.get(&file.path) {
-                Some(working) => {
-                    if self.disk.get(&file.path) != Some(&file.text)
-                        && !self.conflicts.contains(&file.path)
-                    {
+            let Some(working) = self.edits.get(&file.path).cloned() else {
+                disk.insert(file.path.clone(), file.text.clone());
+                continue;
+            };
+            let read = self.disk.get(&file.path).cloned().unwrap_or_default();
+            if read == file.text {
+                disk.insert(file.path.clone(), read);
+                *file = SourceFile::new(file.path.clone(), working);
+                continue;
+            }
+            match diffy::merge(&read, &working, &file.text) {
+                Ok(merged) => {
+                    self.conflicts.retain(|c| c != &file.path);
+                    moved.push(file.path.clone());
+                    disk.insert(file.path.clone(), file.text.clone());
+                    if merged == file.text {
+                        self.edits.remove(&file.path);
+                    } else {
+                        self.edits.insert(file.path.clone(), merged.clone());
+                        *file = SourceFile::new(file.path.clone(), merged);
+                    }
+                }
+                Err(_) => {
+                    if !self.conflicts.contains(&file.path) {
                         self.conflicts.push(file.path.clone());
                     }
                     // The edits stay, over what was read before.
-                    disk.insert(
-                        file.path.clone(),
-                        self.disk.get(&file.path).cloned().unwrap_or_default(),
-                    );
-                    *file = SourceFile::new(file.path.clone(), working.clone());
-                }
-                None => {
-                    disk.insert(file.path.clone(), file.text.clone());
+                    disk.insert(file.path.clone(), read);
+                    *file = SourceFile::new(file.path.clone(), working);
                 }
             }
         }
-        // Steps on files that are no longer edited cannot be undone safely.
+        // Steps on files that are no longer edited, or edited over a new version, cannot be
+        // undone safely.
         let edited: Vec<String> = self.changed();
-        self.undo.retain(|s| edited.contains(&s.path));
-        self.redo.retain(|s| edited.contains(&s.path));
+        let keep = |s: &Step| edited.contains(&s.path) && !moved.contains(&s.path);
+        self.undo.retain(keep);
+        self.redo.retain(keep);
         self.project = project;
         self.disk = disk;
         Ok(())
+    }
+
+    /// Settle a file that changed on disk under unsaved edits to the same lines: keep the
+    /// edits (saving then writes them over the version on disk, which the writer has seen),
+    /// or take the version on disk and drop the edits.
+    pub fn resolve(&mut self, path: &str, keep_edits: bool) -> Result<(), LoadError> {
+        if !self.conflicts.iter().any(|c| c == path) {
+            return Ok(());
+        }
+        if path == self.config_key {
+            let now = std::fs::read_to_string(&self.config_path).ok();
+            if keep_edits {
+                self.config_disk = now;
+            } else {
+                self.config_text = now.clone().unwrap_or_default();
+                self.config_disk = now;
+            }
+            self.conflicts.retain(|c| c != path);
+            self.undo.retain(|s| s.path != path);
+            self.redo.retain(|s| s.path != path);
+            return self.refresh();
+        }
+        let full = self.project.resolve(path);
+        let now = std::fs::read_to_string(&full).map_err(|e| LoadError::Io(full, e))?;
+        if !keep_edits {
+            self.edits.remove(path);
+        }
+        self.disk.insert(path.to_owned(), now);
+        self.conflicts.retain(|c| c != path);
+        self.undo.retain(|s| s.path != path);
+        self.redo.retain(|s| s.path != path);
+        self.refresh()
+    }
+
+    /// For a file in conflict: what changed on disk since it was read, as a diff.
+    pub fn disk_diff(&self, path: &str) -> Option<FileDiff> {
+        if !self.conflicts.iter().any(|c| c == path) {
+            return None;
+        }
+        let (read, now) = if path == self.config_key {
+            (
+                self.config_disk.clone().unwrap_or_default(),
+                std::fs::read_to_string(&self.config_path).unwrap_or_default(),
+            )
+        } else {
+            (
+                self.disk.get(path).cloned().unwrap_or_default(),
+                std::fs::read_to_string(self.project.resolve(path)).unwrap_or_default(),
+            )
+        };
+        Some(diff(path, &read, &now))
     }
 }
 

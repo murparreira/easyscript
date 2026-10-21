@@ -9,6 +9,7 @@ use dm_core::Workspace;
 use dm_core::edit::Edit;
 use dm_core::git::{self, GitStatus};
 use dm_core::project_file::ConfigEdit;
+use dm_core::team::{self, TeamState, Updated};
 use dm_core::workspace::{FileDiff, Session};
 use dm_formats::export::{Format, Options as ExportOptions};
 use dm_formats::import::{Imported, Source};
@@ -234,6 +235,130 @@ async fn git_branch(
         Ok(ws.session())
     })
     .await
+}
+
+/// Where the project stands against the team, as of the last fetch; `seen` is the last
+/// commit the writer saw, for what came in since. None outside git.
+#[tauri::command]
+async fn team_state(
+    seen: Option<String>,
+    opened: State<'_, Opened>,
+) -> Result<Option<TeamState>, String> {
+    with_workspace(&opened, move |ws| {
+        team::team(ws.root(), &ws.owned_paths(), seen.as_deref()).map_err(|e| e.to_string())
+    })
+    .await
+}
+
+/// Ask `origin` what is new (a fetch: no branch or file of the writer's changes), then tell
+/// where the project stands.
+#[tauri::command]
+async fn team_fetch(
+    seen: Option<String>,
+    opened: State<'_, Opened>,
+    github: State<'_, GitHubSession>,
+) -> Result<Option<TeamState>, String> {
+    let root = with_workspace(&opened, |ws| Ok(ws.root().to_owned())).await?;
+    let token = github.token();
+    let client = github.client.clone();
+    tauri::async_runtime::spawn_blocking(move || client.fetch(&root, token.as_deref()))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())?;
+    team_state(seen, opened).await
+}
+
+/// After bringing the team's changes in: what came, and the project read again (unsaved
+/// edits merged with the new versions where they touch other lines).
+#[derive(Serialize)]
+struct BroughtIn {
+    updated: Updated,
+    session: Session,
+}
+
+/// Bring in the team's changes the last fetch got.
+#[tauri::command]
+async fn team_update(opened: State<'_, Opened>) -> Result<BroughtIn, String> {
+    with_workspace(&opened, |ws| {
+        let updated = team::update(ws.root(), &ws.owned_paths()).map_err(|e| e.to_string())?;
+        ws.refresh().map_err(|e| e.to_string())?;
+        Ok(BroughtIn {
+            updated,
+            session: ws.session(),
+        })
+    })
+    .await
+}
+
+/// What sending did: the branch pushed, and its pull request when it has one.
+#[derive(Serialize)]
+struct Sent {
+    branch: String,
+    pull_request: Option<PullRequest>,
+}
+
+/// Send this branch's commits to `origin`. On a branch of the writer's own, with GitHub
+/// signed in, also open its pull request (or find the one open) against the shared branch.
+#[tauri::command]
+async fn team_send(
+    title: String,
+    body: String,
+    opened: State<'_, Opened>,
+    github: State<'_, GitHubSession>,
+) -> Result<Sent, String> {
+    let (root, branch, shared) = with_workspace(&opened, |ws| {
+        let state = team::team(ws.root(), &ws.owned_paths(), None)
+            .map_err(|e| e.to_string())?
+            .ok_or("the project is not in a git repository")?;
+        let branch = state.branch.ok_or("check out a branch first")?;
+        Ok((ws.root().to_owned(), branch, state.shared))
+    })
+    .await?;
+    let token = github.token();
+    let client = github.client.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        client.push(&root, &branch, token.as_deref())?;
+        let on_github = dm_github::origin(&root)?.and_then(|(_, repo)| repo);
+        let pull_request = match (token, on_github, shared) {
+            (Some(token), Some(repo), Some(shared)) if shared != branch => {
+                let title = if title.trim().is_empty() {
+                    branch.clone()
+                } else {
+                    title
+                };
+                Some(client.pull_request(&token, &repo, &branch, &shared, &title, &body)?)
+            }
+            _ => None,
+        };
+        Ok::<_, dm_github::GitHubError>(Sent {
+            branch,
+            pull_request,
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())
+}
+
+/// Settle a file changed on disk under unsaved edits to the same lines: keep the edits, or
+/// take the version on disk.
+#[tauri::command]
+async fn resolve_conflict(
+    path: String,
+    keep_edits: bool,
+    opened: State<'_, Opened>,
+) -> Result<Session, String> {
+    with_workspace(&opened, move |ws| {
+        ws.resolve(&path, keep_edits).map_err(|e| e.to_string())?;
+        Ok(ws.session())
+    })
+    .await
+}
+
+/// For a file in conflict: what changed on disk since it was read.
+#[tauri::command]
+async fn disk_diff(path: String, opened: State<'_, Opened>) -> Result<Option<FileDiff>, String> {
+    with_workspace(&opened, move |ws| Ok(ws.disk_diff(&path))).await
 }
 
 /// The GitHub sign-in: the token (in the system's password store when there is one, else
@@ -540,7 +665,7 @@ async fn github_pull_request(
                 "you are on {base}, where pull requests go: make a branch for your changes first"
             )));
         }
-        client.push(&root, &branch, &token)?;
+        client.push(&root, &branch, Some(&token))?;
         let title = if title.trim().is_empty() {
             branch.clone()
         } else {
@@ -787,6 +912,12 @@ fn app<R: Runtime>(builder: Builder<R>, github: GitHubSession) -> Builder<R> {
             git_status,
             git_commit,
             git_branch,
+            team_state,
+            team_fetch,
+            team_update,
+            team_send,
+            resolve_conflict,
+            disk_diff,
             github_state,
             github_sign_in_start,
             github_sign_in_finish,
@@ -1238,5 +1369,91 @@ mod tests {
             outside.as_str().unwrap().contains("inside the project"),
             "{outside}"
         );
+    }
+
+    /// The app's commands over HTTP, to drive the frontend in a browser against the real
+    /// backend (a fake `__TAURI_INTERNALS__` forwards `invoke` here):
+    /// `DM_BRIDGE_PORT=5299 cargo test -p dm-app bridge -- --ignored --nocapture`.
+    /// `POST /invoke` takes `{cmd, args}` and answers as `invoke` would (an error with 500);
+    /// `GET /events` hands over the events emitted since the last time.
+    #[test]
+    #[ignore = "a dev server: runs until stopped"]
+    fn bridge() {
+        use std::io::{BufRead, BufReader, Read, Write};
+        use tauri::Listener;
+
+        let port = std::env::var("DM_BRIDGE_PORT").unwrap_or_else(|_| "5299".into());
+        let app = app(
+            tauri::test::mock_builder(),
+            GitHubSession::new(GitHub::default(), false),
+        )
+        .build(tauri::test::mock_context(tauri::test::noop_assets()))
+        .unwrap();
+        let webview = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
+            .build()
+            .unwrap();
+        let events: Arc<Mutex<Vec<serde_json::Value>>> = Arc::default();
+        for name in ["project-changed", "clone-progress"] {
+            let events = events.clone();
+            app.listen_any(name, move |e| {
+                let payload: serde_json::Value =
+                    serde_json::from_str(e.payload()).unwrap_or_default();
+                events
+                    .lock()
+                    .unwrap()
+                    .push(serde_json::json!({ "event": name, "payload": payload }));
+            });
+        }
+        let server = std::net::TcpListener::bind(format!("127.0.0.1:{port}")).unwrap();
+        println!("bridge on http://127.0.0.1:{port}");
+        for stream in server.incoming() {
+            let Ok(mut stream) = stream else { continue };
+            let mut reader = BufReader::new(stream.try_clone().unwrap());
+            let mut request = String::new();
+            if reader.read_line(&mut request).is_err() {
+                continue;
+            }
+            let mut length = 0;
+            loop {
+                let mut header = String::new();
+                if reader.read_line(&mut header).unwrap_or(0) == 0 || header.trim().is_empty() {
+                    break;
+                }
+                if let Some((name, value)) = header.split_once(':')
+                    && name.eq_ignore_ascii_case("content-length")
+                {
+                    length = value.trim().parse().unwrap_or(0);
+                }
+            }
+            let mut body = vec![0; length];
+            let _ = reader.read_exact(&mut body);
+            let (status, answer) = if request.starts_with("OPTIONS") {
+                ("204 No Content", String::new())
+            } else if request.starts_with("GET /events") {
+                let taken = std::mem::take(&mut *events.lock().unwrap());
+                ("200 OK", serde_json::Value::Array(taken).to_string())
+            } else if request.starts_with("POST /invoke") {
+                let call_body: serde_json::Value =
+                    serde_json::from_slice(&body).unwrap_or_default();
+                let cmd = call_body["cmd"].as_str().unwrap_or_default().to_owned();
+                let args = call_body["args"].clone();
+                let args = if args.is_null() {
+                    serde_json::json!({})
+                } else {
+                    args
+                };
+                match call(&webview, &cmd, args) {
+                    Ok(value) => ("200 OK", value.to_string()),
+                    Err(error) => ("500 Error", error.to_string()),
+                }
+            } else {
+                ("404 Not Found", "null".into())
+            };
+            let _ = write!(
+                stream,
+                "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Headers: *\r\nAccess-Control-Allow-Methods: GET, POST, OPTIONS\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{answer}",
+                answer.len()
+            );
+        }
     }
 }

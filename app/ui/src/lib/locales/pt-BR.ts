@@ -270,7 +270,6 @@ const ptBR: Record<string, string> = {
   "line {n}": "linha {n}",
   "Add to the project as": "Adicionar ao projeto como",
   "Add to the project": "Adicionar ao projeto",
-  "Not in a place": "Fora de um lugar",
   "cannot read this file ({why}); it is left alone": "não dá para ler este arquivo ({why}); ele fica como está",
   "cannot read “{text}”": "não dá para ler “{text}”",
   "“{label}” is already a title in this file": "“{label}” já é um título neste arquivo",
@@ -509,6 +508,7 @@ const ptBR: Record<string, string> = {
   "The first line said then": "A primeira fala dita então",
   "Close the play panel; Play from here opens it again": "Fechar o painel do jogo; Jogar daqui o abre de novo",
   "Hide": "Esconder",
+  "Other files": "Outros arquivos",
 };
 
 export default ptBR;

@@ -11,6 +11,7 @@ workspace = true
 
 [dependencies]
 base64 = "0.23.1"
+diffy = "0.5.2"
 dm-syntax.workspace = true
 git2 = { version = "0.21.0", features = ["vendored-libgit2"] }
 globset = "0.4.20"

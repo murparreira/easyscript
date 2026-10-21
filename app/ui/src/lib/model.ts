@@ -18,8 +18,12 @@ export type FileOut = { path: string; sections: SectionOut[] };
 export type PlaceOut = { id: string; name: string; group: string | null; files: FileOut[] };
 export type GroupOut = { name: string | null; places: PlaceOut[] };
 
+/** A file's name without its folder and extension: `src/talks/gate.dialogue` → `gate`. */
+export const fileName = (path: string) => path.slice(path.lastIndexOf("/") + 1).replace(/\.[^.]+$/, "");
+
 /** Labels arranged by place, places by group, in the project file's order. Labels in no
- *  place come last, one "place" per file. */
+ *  place come last, one "place" per file, by its name; with no places at all, grouped by
+ *  folder. */
 export function organize(view: ReadView): GroupOut[] {
   const places: PlaceOut[] = view.places.map((p) => ({ ...p, files: [] }));
   const byId = new Map(places.map((p) => [p.id, p]));
@@ -31,7 +35,8 @@ export function organize(view: ReadView): GroupOut[] {
         if (!place) {
           place = loose.find((p) => p.id === file.path);
           if (!place) {
-            place = { id: file.path, name: file.path, group: null, files: [] };
+            const folder = file.path.includes("/") ? file.path.slice(0, file.path.lastIndexOf("/")) : null;
+            place = { id: file.path, name: fileName(file.path), group: places.length > 0 ? t("Other files") : folder, files: [] };
             loose.push(place);
           }
         }
@@ -61,8 +66,13 @@ export function organize(view: ReadView): GroupOut[] {
     }
     group.places.push(place);
   }
-  if (loose.length > 0) {
-    groups.push({ name: places.length > 0 ? t("Not in a place") : null, places: loose });
+  for (const place of loose) {
+    let group = groups.find((g) => g.name === place.group && g.places.every((p) => loose.includes(p)));
+    if (!group) {
+      group = { name: place.group, places: [] };
+      groups.push(group);
+    }
+    group.places.push(place);
   }
   return groups;
 }

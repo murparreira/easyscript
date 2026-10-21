@@ -220,6 +220,58 @@ fn open_or_find_a_pull_request() {
 }
 
 #[test]
+fn fetch_brings_origins_branches_and_drops_deleted_ones() {
+    use git2::{Repository, Signature};
+    let dir = tempfile::tempdir().unwrap();
+    let bare = Repository::init_bare(dir.path().join("origin.git")).unwrap();
+    let sig = Signature::now("Teammate", "t@example.com").unwrap();
+    let blob = bare.blob(b"~ a\n").unwrap();
+    let mut tree = bare.treebuilder(None).unwrap();
+    tree.insert("a.dialogue", blob, 0o100644).unwrap();
+    let tree = bare.find_tree(tree.write().unwrap()).unwrap();
+    let first = bare
+        .commit(Some("refs/heads/main"), &sig, &sig, "start", &tree, &[])
+        .unwrap();
+    bare.reference("refs/heads/draft", first, true, "").unwrap();
+    bare.set_head("refs/heads/main").unwrap();
+    let work = Repository::init(dir.path().join("work")).unwrap();
+    work.remote("origin", dir.path().join("origin.git").to_str().unwrap())
+        .unwrap();
+    let root = dir.path().join("work");
+
+    GitHub::default().fetch(&root, None).unwrap();
+    let tip = |name: &str| {
+        work.find_reference(name)
+            .ok()
+            .and_then(|r| r.peel_to_commit().ok())
+            .map(|c| c.id())
+    };
+    assert_eq!(tip("refs/remotes/origin/main"), Some(first));
+    assert_eq!(tip("refs/remotes/origin/draft"), Some(first));
+    assert_eq!(
+        work.find_reference("refs/remotes/origin/HEAD")
+            .unwrap()
+            .symbolic_target()
+            .ok()
+            .flatten(),
+        Some("refs/remotes/origin/main"),
+        "the shared branch is known"
+    );
+    assert!(
+        work.head().is_err(),
+        "no branch of the writer's was touched"
+    );
+
+    bare.find_reference("refs/heads/draft")
+        .unwrap()
+        .delete()
+        .unwrap();
+    GitHub::default().fetch(&root, None).unwrap();
+    assert_eq!(tip("refs/remotes/origin/draft"), None, "deleted on origin");
+    assert_eq!(tip("refs/remotes/origin/HEAD"), Some(first));
+}
+
+#[test]
 fn push_fast_forwards_only() {
     use git2::{Repository, Signature};
     let dir = tempfile::tempdir().unwrap();
@@ -243,7 +295,9 @@ fn push_fast_forwards_only() {
     };
     let first = commit(&work, "a.dialogue", "one", "refs/heads/rewrite");
     let root = dir.path().join("work");
-    GitHub::default().push(&root, "rewrite", "tok").unwrap();
+    GitHub::default()
+        .push(&root, "rewrite", Some("tok"))
+        .unwrap();
     assert_eq!(
         bare.find_reference("refs/heads/rewrite").unwrap().target(),
         Some(first)
@@ -258,7 +312,9 @@ fn push_fast_forwards_only() {
     // Someone else pushed to the branch: no force, a clear refusal.
     commit(&bare, "a.dialogue", "theirs", "refs/heads/rewrite");
     commit(&work, "a.dialogue", "mine", "refs/heads/rewrite");
-    let error = GitHub::default().push(&root, "rewrite", "tok").unwrap_err();
+    let error = GitHub::default()
+        .push(&root, "rewrite", Some("tok"))
+        .unwrap_err();
     assert!(error.0.contains("commits you do not have"), "{error}");
 }
 

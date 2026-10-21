@@ -59,14 +59,14 @@ impl From<git2::Error> for GitError {
 }
 
 /// The repository the project is in, and the project's folder inside it.
-struct Repo {
-    repo: Repository,
+pub(crate) struct Repo {
+    pub(crate) repo: Repository,
     /// The project root, relative to the repository's working folder (`""` at its top).
     prefix: PathBuf,
 }
 
 impl Repo {
-    fn open(root: &Path) -> Result<Option<Self>, GitError> {
+    pub(crate) fn open(root: &Path) -> Result<Option<Self>, GitError> {
         let repo = match Repository::discover(root) {
             Ok(repo) => repo,
             Err(e) if e.code() == git2::ErrorCode::NotFound => return Ok(None),
@@ -84,7 +84,7 @@ impl Repo {
     }
 
     /// A project path as a repository path (`/` separated).
-    fn in_repo(&self, path: &str) -> String {
+    pub(crate) fn in_repo(&self, path: &str) -> String {
         let joined = self.prefix.join(path);
         joined
             .components()
@@ -94,7 +94,7 @@ impl Repo {
     }
 
     /// A repository path as a project path, when it is inside the project.
-    fn in_project(&self, path: &str) -> Option<String> {
+    pub(crate) fn in_project(&self, path: &str) -> Option<String> {
         let prefix = self
             .prefix
             .components()
@@ -108,7 +108,7 @@ impl Repo {
         }
     }
 
-    fn workdir(&self) -> &Path {
+    pub(crate) fn workdir(&self) -> &Path {
         self.repo.workdir().expect("checked in open")
     }
 }
@@ -184,7 +184,7 @@ pub fn status(root: &Path, paths: &[String]) -> Result<Option<GitStatus>, GitErr
     }))
 }
 
-fn conflicts(repo: &Repository) -> Result<Vec<String>, GitError> {
+pub(crate) fn conflicts(repo: &Repository) -> Result<Vec<String>, GitError> {
     let index = repo.index()?;
     if !index.has_conflicts() {
         return Ok(Vec::new());
@@ -269,7 +269,7 @@ pub fn commit(root: &Path, paths: &[String], message: &str) -> Result<String, Gi
     Ok(id.to_string()[..7].to_owned())
 }
 
-fn entry(path: &str, mode: u32, id: Oid, size: usize) -> IndexEntry {
+pub(crate) fn entry(path: &str, mode: u32, id: Oid, size: usize) -> IndexEntry {
     IndexEntry {
         ctime: IndexTime::new(0, 0),
         mtime: IndexTime::new(0, 0),

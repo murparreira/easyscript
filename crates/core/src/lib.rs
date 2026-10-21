@@ -21,6 +21,7 @@ pub mod model;
 mod project;
 pub mod project_file;
 pub mod stats;
+pub mod team;
 pub mod view;
 pub mod workspace;
 

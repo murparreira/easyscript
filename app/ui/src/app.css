@@ -1628,7 +1628,10 @@ table.flags {
 .rail {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   min-height: 0;
+  min-width: 0;
+  overflow: hidden;
   background: var(--panel);
   border-right: 1px solid var(--rule);
 }
@@ -1647,6 +1650,7 @@ table.flags {
 }
 
 .rail-group {
+  overflow-wrap: anywhere;
   font: 700 0.62rem var(--ui);
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -1740,7 +1744,12 @@ table.flags {
 
 .new-scene input {
   flex: 1 1 100%;
+  min-width: 0;
   font-family: var(--mono);
+}
+
+.new-scene .hint {
+  overflow-wrap: anywhere;
 }
 
 .scene {

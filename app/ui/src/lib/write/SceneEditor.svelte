@@ -7,7 +7,7 @@
   import { plural, t } from "../i18n.svelte";
   import LineEditor from "../LineEditor.svelte";
   import Marks from "../Marks.svelte";
-  import { walk } from "../model";
+  import { fileName, walk } from "../model";
   import Notes from "../Notes.svelte";
   import { useReader } from "../reader.svelte";
   import AddBar from "./AddBar.svelte";
@@ -75,7 +75,7 @@
     {#key label.id + label.span.file}
       <header class="scene-head">
         <div class="eyebrow">
-          {place?.name ?? t("Not in a place")}{#if reader.showIds}<span class="path">&ensp;{file.path}</span>{/if}
+          {place?.name ?? fileName(file.path)}{#if reader.showIds}<span class="path">&ensp;{file.path}</span>{/if}
         </div>
         <h1 class="scene-title">{label.id}</h1>
         <div class="scene-meta">

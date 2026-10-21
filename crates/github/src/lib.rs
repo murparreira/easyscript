@@ -526,39 +526,79 @@ impl GitHub {
         Ok(())
     }
 
-    /// Push a branch to `origin` (over HTTPS with the token when it is on GitHub, whatever
-    /// address `origin` has). Only a fast-forward: never over commits on GitHub the writer
-    /// does not have.
-    pub fn push(&self, root: &Path, branch: &str, token: &str) -> Result<(), GitHubError> {
-        let repo = git2::Repository::discover(root)?;
+    /// Where to reach `origin`: on GitHub with a token, its HTTPS address (whatever address
+    /// `origin` has); else `origin`'s own address, with the system's credentials (the SSH
+    /// agent). Also whether the token goes along.
+    fn reach(
+        &self,
+        repo: &git2::Repository,
+        token: Option<&str>,
+    ) -> Result<(String, bool), GitHubError> {
         let remote = repo
             .find_remote("origin")
-            .map_err(|_| GitHubError("the repository has no `origin` to push to".into()))?;
+            .map_err(|_| GitHubError("the repository has no `origin`".into()))?;
         let url = remote.url().ok().unwrap_or_default().to_owned();
-        let on_github = github_repo(&url);
-        let push_url = match &on_github {
-            Some(r) => format!("{}/{}/{}.git", self.git, r.owner, r.name),
-            None => url,
-        };
-        let mut target = repo.remote_anonymous(&push_url)?;
+        Ok(match (github_repo(&url), token) {
+            (Some(r), Some(_)) => (format!("{}/{}/{}.git", self.git, r.owner, r.name), true),
+            _ => (url, false),
+        })
+    }
+
+    /// Bring `origin`'s branches up to date (`refs/remotes/origin/*`), as `git fetch --prune`
+    /// would. Changes no branch of the writer's and no file.
+    pub fn fetch(&self, root: &Path, token: Option<&str>) -> Result<(), GitHubError> {
+        let repo = git2::Repository::discover(root)?;
+        let (url, with_token) = self.reach(&repo, token)?;
+        let mut remote = repo.remote_anonymous(&url)?;
+        let mut options = git2::FetchOptions::new();
+        options
+            .remote_callbacks(callbacks(token, with_token))
+            .prune(git2::FetchPrune::On);
+        remote
+            .fetch(
+                &["+refs/heads/*:refs/remotes/origin/*"],
+                Some(&mut options),
+                Some("dialogue-maker: fetch"),
+            )
+            .map_err(|e| GitHubError(format!("cannot reach origin: {}", e.message())))?;
+        // Which branch the team shares, when no clone recorded it.
+        if repo.find_reference("refs/remotes/origin/HEAD").is_err() {
+            let mut remote = repo.remote_anonymous(&url)?;
+            let connection = remote.connect_auth(
+                git2::Direction::Fetch,
+                Some(callbacks(token, with_token)),
+                None,
+            );
+            if let Ok(connection) = connection
+                && let Ok(name) = connection.default_branch()
+                && let Some(branch) = name
+                    .as_str()
+                    .ok()
+                    .and_then(|n| n.strip_prefix("refs/heads/"))
+                && repo
+                    .find_reference(&format!("refs/remotes/origin/{branch}"))
+                    .is_ok()
+            {
+                repo.reference_symbolic(
+                    "refs/remotes/origin/HEAD",
+                    &format!("refs/remotes/origin/{branch}"),
+                    true,
+                    "dialogue-maker: origin's default branch",
+                )?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Push a branch to `origin` (see [`Self::fetch`] for how it is reached). Only a
+    /// fast-forward: never over commits there the writer does not have.
+    pub fn push(&self, root: &Path, branch: &str, token: Option<&str>) -> Result<(), GitHubError> {
+        let repo = git2::Repository::discover(root)?;
+        let (url, with_token) = self.reach(&repo, token)?;
+        let mut target = repo.remote_anonymous(&url)?;
         let mut refused: Option<String> = None;
-        let mut asked = false;
         {
-            let mut callbacks = git2::RemoteCallbacks::new();
-            // The token goes to GitHub only, and once: a refused token is not offered again.
-            callbacks.credentials(|_, _, _| {
-                if on_github.is_none() {
-                    return Err(git2::Error::from_str(
-                        "`origin` asks for a password: push with git",
-                    ));
-                }
-                if std::mem::replace(&mut asked, true) {
-                    return Err(git2::Error::from_str(
-                        "GitHub did not accept the sign-in: sign in again",
-                    ));
-                }
-                git2::Cred::userpass_plaintext("x-access-token", token)
-            });
+            let mut callbacks = callbacks(token, with_token);
             callbacks.push_update_reference(|_, status| {
                 if let Some(status) = status {
                     refused = Some(status.to_owned());
@@ -569,15 +609,19 @@ impl GitHub {
             options.remote_callbacks(callbacks);
             let refspec = format!("refs/heads/{branch}:refs/heads/{branch}");
             target.push(&[refspec.as_str()], Some(&mut options)).map_err(|e| {
-            if e.code() == git2::ErrorCode::NotFastForward || e.message().contains("non-fastforward") {
-                GitHubError(format!("the branch {branch} on GitHub has commits you do not have; bring them in with git first"))
-            } else {
-                GitHubError(format!("cannot push {branch}: {}", e.message()))
-            }
-        })?;
+                if e.code() == git2::ErrorCode::NotFastForward
+                    || e.message().contains("non-fastforward")
+                {
+                    GitHubError(format!(
+                        "{branch} on origin has commits you do not have: bring the team's changes in first"
+                    ))
+                } else {
+                    GitHubError(format!("cannot push {branch}: {}", e.message()))
+                }
+            })?;
         }
         if let Some(reason) = refused {
-            return fail(format!("GitHub refused {branch}: {reason}"));
+            return fail(format!("origin refused {branch}: {reason}"));
         }
         // Remember what origin has now, as `git push` would.
         let head = repo
@@ -592,6 +636,44 @@ impl GitHub {
         )?;
         Ok(())
     }
+}
+
+/// Credentials for `origin`: the token, once, when it goes along (the token goes to GitHub
+/// only); else the SSH agent, or git's own. A refused one is not offered again.
+fn callbacks<'a>(token: Option<&'a str>, with_token: bool) -> git2::RemoteCallbacks<'a> {
+    let mut callbacks = git2::RemoteCallbacks::new();
+    let mut tries = 0;
+    callbacks.credentials(move |_, username, allowed| {
+        tries += 1;
+        if with_token {
+            return match token {
+                Some(token) if tries == 1 => {
+                    git2::Cred::userpass_plaintext("x-access-token", token)
+                }
+                _ => Err(git2::Error::from_str(
+                    "GitHub did not accept the sign-in: sign in again",
+                )),
+            };
+        }
+        if tries > 3 {
+            return Err(git2::Error::from_str(
+                "origin did not accept your credentials: check them with git",
+            ));
+        }
+        let user = username.unwrap_or("git");
+        if allowed.contains(git2::CredentialType::USERNAME) {
+            git2::Cred::username(user)
+        } else if allowed.contains(git2::CredentialType::SSH_KEY) {
+            git2::Cred::ssh_key_from_agent(user)
+        } else if allowed.contains(git2::CredentialType::DEFAULT) {
+            git2::Cred::default()
+        } else {
+            Err(git2::Error::from_str(
+                "origin asks for a password: sign in to GitHub, or use git",
+            ))
+        }
+    });
+    callbacks
 }
 
 #[cfg(test)]

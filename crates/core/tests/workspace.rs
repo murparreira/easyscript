@@ -166,6 +166,141 @@ fn never_saves_over_a_file_changed_on_disk() {
 }
 
 #[test]
+fn edits_and_a_change_on_disk_to_other_lines_are_merged() {
+    let dir = tempfile::tempdir().unwrap();
+    let text = "~ a\nKeeper: One.\n\n~ b\nKeeper: Two.\n\n~ c\nKeeper: Three.\n";
+    fs::write(dir.path().join("a.dialogue"), text).unwrap();
+    let mut ws = Workspace::open(dir.path(), None).unwrap();
+    ws.edit(
+        "a.dialogue",
+        &Edit::SetText {
+            at: line(text, 2),
+            text: "Uno.".into(),
+        },
+    )
+    .unwrap();
+    // A teammate's change to another scene arrives (a pull, the Godot editor).
+    let theirs = "~ a\nKeeper: One.\n\n~ b\nKeeper: Two.\n\n~ c\nKeeper: Tres.\n";
+    fs::write(dir.path().join("a.dialogue"), theirs).unwrap();
+    ws.refresh().unwrap();
+    assert!(ws.state().conflicts.is_empty());
+    assert_eq!(ws.state().changed, ["a.dialogue"]);
+    assert!(!ws.state().can_undo, "undoing would drop their change");
+    assert_eq!(
+        ws.project().files[0].text,
+        "~ a\nKeeper: Uno.\n\n~ b\nKeeper: Two.\n\n~ c\nKeeper: Tres.\n"
+    );
+    // Only the edit is unsaved: the diff is against their version.
+    let diffs = ws.diffs();
+    let changed: Vec<_> = diffs[0]
+        .hunks
+        .iter()
+        .flatten()
+        .filter(|l| l.kind != DiffKind::Same)
+        .map(|l| l.text.as_str())
+        .collect();
+    assert_eq!(changed, ["Keeper: One.", "Keeper: Uno."]);
+    ws.save().unwrap();
+    assert_eq!(
+        read(dir.path(), "a.dialogue"),
+        "~ a\nKeeper: Uno.\n\n~ b\nKeeper: Two.\n\n~ c\nKeeper: Tres.\n"
+    );
+}
+
+#[test]
+fn merging_keeps_every_byte() {
+    let dir = tempfile::tempdir().unwrap();
+    let text = "~ a\r\nKeeper: One.\r\n\r\n~ b\r\nKeeper: Two.";
+    fs::write(dir.path().join("a.dialogue"), text).unwrap();
+    let mut ws = Workspace::open(dir.path(), None).unwrap();
+    ws.edit(
+        "a.dialogue",
+        &Edit::SetText {
+            at: line(text, 2),
+            text: "Uno.".into(),
+        },
+    )
+    .unwrap();
+    fs::write(
+        dir.path().join("a.dialogue"),
+        "~ a\r\nKeeper: One.\r\n\r\n~ b\r\nKeeper: Dos.",
+    )
+    .unwrap();
+    ws.refresh().unwrap();
+    assert_eq!(
+        ws.project().files[0].text,
+        "~ a\r\nKeeper: Uno.\r\n\r\n~ b\r\nKeeper: Dos."
+    );
+}
+
+#[test]
+fn a_change_on_disk_already_in_the_edits_leaves_nothing_to_save() {
+    let dir = project();
+    let mut ws = Workspace::open(dir.path(), None).unwrap();
+    ws.edit(
+        "a.dialogue",
+        &Edit::SetText {
+            at: line("~ a\n", 2),
+            text: "Uno.".into(),
+        },
+    )
+    .unwrap();
+    fs::write(
+        dir.path().join("a.dialogue"),
+        "~ a\nKeeper: Uno.\nKeeper: Two.\n",
+    )
+    .unwrap();
+    ws.refresh().unwrap();
+    assert!(ws.state().changed.is_empty() && ws.state().conflicts.is_empty());
+}
+
+#[test]
+fn a_conflict_is_settled_one_way_or_the_other() {
+    for keep in [true, false] {
+        let dir = project();
+        let mut ws = Workspace::open(dir.path(), None).unwrap();
+        ws.edit(
+            "a.dialogue",
+            &Edit::SetText {
+                at: line("~ a\n", 2),
+                text: "Uno.".into(),
+            },
+        )
+        .unwrap();
+        fs::write(
+            dir.path().join("a.dialogue"),
+            "~ a\nKeeper: Eins.\nKeeper: Two.\n",
+        )
+        .unwrap();
+        ws.refresh().unwrap();
+        assert_eq!(ws.state().conflicts, ["a.dialogue"]);
+        let theirs = ws.disk_diff("a.dialogue").unwrap();
+        assert!(
+            theirs.hunks[0]
+                .iter()
+                .any(|l| l.kind == DiffKind::Added && l.text == "Keeper: Eins.")
+        );
+
+        ws.resolve("a.dialogue", keep).unwrap();
+        assert!(ws.state().conflicts.is_empty());
+        if keep {
+            assert_eq!(ws.state().changed, ["a.dialogue"]);
+            ws.save().unwrap();
+            assert_eq!(
+                read(dir.path(), "a.dialogue"),
+                "~ a\nKeeper: Uno.\nKeeper: Two.\n"
+            );
+        } else {
+            assert!(ws.state().changed.is_empty());
+            assert_eq!(
+                ws.project().files[0].text,
+                "~ a\nKeeper: Eins.\nKeeper: Two.\n"
+            );
+        }
+    }
+}
+
+#[test]
 fn refresh_takes_new_text_for_files_without_edits() {
     let dir = project();
     let mut ws = Workspace::open(dir.path(), None).unwrap();
