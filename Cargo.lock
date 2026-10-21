@@ -1155,6 +1155,7 @@ name = "dm-app"
 version = "0.1.0"
 dependencies = [
  "dm-core",
+ "dm-formats",
  "dm-github",
  "git2",
  "keyring",

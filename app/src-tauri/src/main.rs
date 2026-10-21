@@ -10,6 +10,8 @@ use dm_core::edit::Edit;
 use dm_core::git::{self, GitStatus};
 use dm_core::project_file::ConfigEdit;
 use dm_core::workspace::{FileDiff, Session};
+use dm_formats::export::{Format, Options as ExportOptions};
+use dm_formats::import::{Imported, Source};
 use dm_github::{Account, GitHub, PullRequest, Repo, SignIn};
 use notify_debouncer_full::notify::{RecommendedWatcher, RecursiveMode};
 use notify_debouncer_full::{DebounceEventResult, Debouncer, RecommendedCache, new_debouncer};
@@ -461,6 +463,116 @@ async fn github_pull_request(
     .map_err(|e| e.to_string())
 }
 
+/// Write the script in another format to `path` (where the writer chose), unsaved edits
+/// included. A translation table already there keeps its translations. Never over one of
+/// the project's own files.
+#[tauri::command]
+async fn export_script(
+    format: Format,
+    options: ExportOptions,
+    path: String,
+    opened: State<'_, Opened>,
+) -> Result<(), String> {
+    with_workspace(&opened, move |ws| {
+        let target = PathBuf::from(&path);
+        let own = ws
+            .owned_paths()
+            .iter()
+            .any(|p| same_file(&ws.root().join(p), &target));
+        if own {
+            return Err(format!(
+                "{path} is one of the project's own files: choose another"
+            ));
+        }
+        let project = ws.project();
+        let script = dm_core::lower(project);
+        let existing = std::fs::read_to_string(&target).ok();
+        let text =
+            dm_formats::export::render(format, project, &script, &options, existing.as_deref())
+                .map_err(|e| e.to_string())?;
+        std::fs::write(&target, text).map_err(|e| format!("{path}: {e}"))
+    })
+    .await
+}
+
+fn same_file(a: &Path, b: &Path) -> bool {
+    let canonical = |p: &Path| p.canonicalize().unwrap_or_else(|_| p.to_owned());
+    canonical(a) == canonical(b)
+}
+
+fn read_import(path: &str) -> Result<Imported, String> {
+    let source = Source::of(Path::new(path))
+        .ok_or_else(|| format!("{path}: not a .twee, .yarn or .ink file"))?;
+    let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+    Ok(dm_formats::import::import(source, &text))
+}
+
+/// Another tool's script as a Dialogue Manager file, to look at before adding it.
+#[tauri::command]
+async fn import_preview(path: String) -> Result<Imported, String> {
+    tauri::async_runtime::spawn_blocking(move || read_import(&path))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+/// After an import: the session, and whether the project's sources take the new file in.
+#[derive(Serialize)]
+struct ImportDone {
+    session: Session,
+    included: bool,
+}
+
+/// Convert `source` and add it to the project as `path` (relative to its root), a new
+/// file: never over one that exists.
+#[tauri::command]
+async fn import_write(
+    source: String,
+    path: String,
+    opened: State<'_, Opened>,
+) -> Result<ImportDone, String> {
+    with_workspace(&opened, move |ws| {
+        let relative = Path::new(path.trim());
+        let inside = relative
+            .components()
+            .all(|c| matches!(c, std::path::Component::Normal(_)));
+        if !inside || relative.as_os_str().is_empty() {
+            return Err(format!("{path}: give a path inside the project"));
+        }
+        if relative.extension().and_then(|e| e.to_str()) != Some("dialogue") {
+            return Err(format!("{path}: the file's name should end in .dialogue"));
+        }
+        let imported = read_import(&source)?;
+        let target = ws.root().join(relative);
+        if let Some(parent) = target.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| format!("{path}: {e}"))?;
+        }
+        std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&target)
+            .and_then(|mut f| std::io::Write::write_all(&mut f, imported.text.as_bytes()))
+            .map_err(|e| {
+                if e.kind() == std::io::ErrorKind::AlreadyExists {
+                    format!("{path} exists: choose another name")
+                } else {
+                    format!("{path}: {e}")
+                }
+            })?;
+        ws.refresh().map_err(|e| e.to_string())?;
+        let wanted = relative
+            .components()
+            .map(|c| c.as_os_str().to_string_lossy())
+            .collect::<Vec<_>>()
+            .join("/");
+        let included = ws.project().files.iter().any(|f| f.path == wanted);
+        Ok(ImportDone {
+            session: ws.session(),
+            included,
+        })
+    })
+    .await
+}
+
 /// A project folder given on the command line (`dm-app path/to/game`), if any.
 #[tauri::command]
 fn startup_project() -> Option<String> {
@@ -563,6 +675,9 @@ fn app<R: Runtime>(builder: Builder<R>, github: GitHubSession) -> Builder<R> {
             github_sign_in_cancel,
             github_sign_out,
             github_pull_request,
+            export_script,
+            import_preview,
+            import_write,
             startup_project
         ])
 }
@@ -869,5 +984,114 @@ mod tests {
         call(&webview, "github_sign_out", no_args.clone()).unwrap();
         let state = call(&webview, "github_state", no_args).unwrap();
         assert_eq!(state["account"], serde_json::Value::Null);
+    }
+
+    #[test]
+    fn export_and_import_through_the_commands() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("game");
+        std::fs::create_dir_all(root.join("dialogue")).unwrap();
+        std::fs::write(
+            root.join("dialogue/a.dialogue"),
+            "~ a\nKeeper: One.\n=> END\n",
+        )
+        .unwrap();
+        let app = app(
+            tauri::test::mock_builder(),
+            GitHubSession::new(GitHub::default(), false),
+        )
+        .build(tauri::test::mock_context(tauri::test::noop_assets()))
+        .unwrap();
+        let webview = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
+            .build()
+            .unwrap();
+        let session = call(
+            &webview,
+            "open_project",
+            serde_json::json!({ "path": root }),
+        )
+        .unwrap();
+        let at = session["view"]["script"]["files"][0]["sections"][0]["labels"][0]["body"][0]
+            ["span"]["start"]
+            .clone();
+        call(&webview, "edit", serde_json::json!({ "path": "dialogue/a.dialogue", "edits": [{ "op": "set_text", "at": at, "text": "Uno." }] })).unwrap();
+
+        // Exports take the edits not saved yet.
+        let out = dir.path().join("script.json");
+        let options = serde_json::json!({ "locale": null, "extra_locales": [], "character": null });
+        call(
+            &webview,
+            "export_script",
+            serde_json::json!({ "format": "json", "options": options, "path": out }),
+        )
+        .unwrap();
+        let json: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&out).unwrap()).unwrap();
+        assert_eq!(json["files"][0]["labels"][0]["body"][0]["text"], "Uno.");
+        let table = dir.path().join("t.csv");
+        std::fs::write(&table, "keys,en,pt_BR\nUno.,Uno.,Um.\n").unwrap();
+        call(&webview, "export_script", serde_json::json!({ "format": "translation", "options": { "locale": "en", "extra_locales": ["pt_BR"], "character": null }, "path": table })).unwrap();
+        assert!(
+            std::fs::read_to_string(&table)
+                .unwrap()
+                .contains("Uno.,Uno.,Um.,Keeper,")
+        );
+        let refused = call(&webview, "export_script", serde_json::json!({ "format": "fountain", "options": options, "path": root.join("dialogue/a.dialogue") })).unwrap_err();
+        assert!(
+            refused.as_str().unwrap().contains("project's own files"),
+            "{refused}"
+        );
+        assert_eq!(
+            std::fs::read_to_string(root.join("dialogue/a.dialogue")).unwrap(),
+            "~ a\nKeeper: One.\n=> END\n"
+        );
+
+        // Imports: a look first, then a new file in the project.
+        let yarn = dir.path().join("gate.yarn");
+        std::fs::write(&yarn, "title: Gate\n---\nGuard: Halt!\n<<wait 1>>\n===\n").unwrap();
+        let preview = call(
+            &webview,
+            "import_preview",
+            serde_json::json!({ "path": yarn }),
+        )
+        .unwrap();
+        assert!(preview["text"].as_str().unwrap().contains("Guard: Halt!"));
+        assert_eq!(preview["warnings"][0]["line"], 4);
+        let done = call(
+            &webview,
+            "import_write",
+            serde_json::json!({ "source": yarn, "path": "dialogue/gate.dialogue" }),
+        )
+        .unwrap();
+        assert_eq!(done["included"], true);
+        assert_eq!(
+            done["session"]["view"]["script"]["files"]
+                .as_array()
+                .unwrap()
+                .len(),
+            2
+        );
+        assert_eq!(
+            done["session"]["state"]["changed"],
+            serde_json::json!(["dialogue/a.dialogue"]),
+            "the edits not saved stay"
+        );
+        let again = call(
+            &webview,
+            "import_write",
+            serde_json::json!({ "source": yarn, "path": "dialogue/gate.dialogue" }),
+        )
+        .unwrap_err();
+        assert!(again.as_str().unwrap().contains("exists"), "{again}");
+        let outside = call(
+            &webview,
+            "import_write",
+            serde_json::json!({ "source": yarn, "path": "../gate.dialogue" }),
+        )
+        .unwrap_err();
+        assert!(
+            outside.as_str().unwrap().contains("inside the project"),
+            "{outside}"
+        );
     }
 }

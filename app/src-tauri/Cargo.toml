@@ -11,6 +11,7 @@ tauri-build = { version = "2.7.3", features = [] }
 
 [dependencies]
 dm-core.workspace = true
+dm-formats.workspace = true
 dm-github.workspace = true
 keyring = "4.2.0"
 notify = "8.2.0"
